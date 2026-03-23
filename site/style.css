@@ -1,0 +1,228 @@
+:root {
+  --warm-50: #f8f9fb;
+  --warm-100: #f0f2f5;
+  --warm-200: #e1e4ea;
+  --warm-250: #d5d9e2;
+  --warm-400: #8b92a0;
+  --warm-600: #4e5564;
+  --warm-800: #1e2433;
+  --warm-900: #162955;
+  --accent: #2e6ff2;
+  --heading-color: #162955;
+}
+
+body {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  color: var(--warm-900);
+  --bs-heading-color: var(--heading-color);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Nav */
+.navbar { border-bottom: none; background: var(--warm-200); }
+.navbar-brand {
+  font-weight: 800;
+  font-size: 1.2rem;
+  letter-spacing: -0.03em;
+  color: var(--heading-color);
+}
+.navbar-brand:hover { color: var(--heading-color); }
+.nav-link-custom {
+  color: var(--warm-600);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: color 0.15s;
+}
+.nav-link-custom:hover { color: var(--warm-900); }
+
+/* Hero */
+.hero { padding: 5rem 0 4rem; }
+.version-tag {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--warm-400);
+  vertical-align: middle;
+  margin-left: 0.2rem;
+}
+.hero h1 {
+  font-size: 3.25rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+.hero .lead {
+  font-size: 1.125rem;
+  color: var(--warm-600);
+  line-height: 1.6;
+}
+
+/* Install box */
+.install-box {
+  background: var(--warm-200);
+  color: var(--warm-800);
+  border-radius: 0;
+  padding: 0.6rem 1rem;
+  font-family: "SF Mono", "Fira Code", Consolas, monospace;
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.install-box .copy-btn {
+  background: none;
+  border: none;
+  color: var(--warm-600);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.install-box .copy-btn:hover { color: var(--warm-900); }
+
+/* Code block */
+pre.code-sample {
+  background: var(--warm-250);
+  color: var(--warm-900);
+  border-radius: 0;
+  padding: 1.75rem;
+  font-family: "SF Mono", "Fira Code", Consolas, monospace;
+  font-size: 0.8rem;
+  line-height: 1.7;
+  overflow-x: hidden;
+  border: none;
+  margin: 0;
+}
+pre.code-sample .kw { color: var(--accent); }
+pre.code-sample .fn { color: var(--accent); }
+pre.code-sample .str { color: var(--accent); }
+pre.code-sample .cm { color: var(--warm-600); }
+
+/* Features */
+.features { padding: 2rem 0; }
+.feature-item { padding: 1rem 0; }
+.feature-item h3 {
+  font-size: 0.75rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.feature-item p {
+  font-size: 0.8rem;
+  color: var(--warm-600);
+  line-height: 1.55;
+  margin: 0.2rem 0 0;
+}
+.feature-item code {
+  color: var(--accent);
+}
+
+/* Protocols */
+.protocols { padding: 2rem 0 3.5rem; }
+.protocols h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.5rem;
+  color: var(--heading-color);
+}
+.protocols-lead {
+  font-size: 0.925rem;
+  color: var(--warm-600);
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+.protocol-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--heading-color);
+}
+.protocol-card {
+  border: none;
+  border-radius: 0;
+  padding: 1.25rem;
+  height: 100%;
+}
+.protocol-card h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0.25rem 0 0.5rem;
+  color: var(--warm-400);
+}
+.protocol-card p {
+  font-size: 0.8rem;
+  color: var(--warm-600);
+  line-height: 1.55;
+  margin: 0;
+}
+.tool-count {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-top: 0.5rem;
+}
+
+/* Footer */
+footer {
+  padding: 3rem 0 2rem;
+  background: var(--warm-200);
+  color: var(--warm-400);
+  font-size: 0.8rem;
+}
+footer h6 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--warm-900);
+  margin-bottom: 0.75rem;
+}
+footer ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+footer ul li { margin-bottom: 0.4rem; }
+footer a { color: var(--warm-600); text-decoration: none; }
+footer a:hover { color: var(--warm-900); }
+.footer-bottom {
+  border-top: 1px solid var(--warm-250);
+  color: var(--warm-400);
+  text-transform: uppercase;
+}
+
+@media (max-width: 991px) {
+  .hero { padding: 3.5rem 0 3rem; }
+  .hero h1 { font-size: 2.5rem; }
+}
+
+/* Dark theme */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --warm-50: #0f1520;
+    --warm-100: #141b28;
+    --warm-200: #1c2536;
+    --warm-250: #243040;
+    --warm-400: #5e6d84;
+    --warm-600: #94a3b8;
+    --warm-800: #e2e8f0;
+    --warm-900: #f1f5f9;
+  }
+
+  body { background: #0f1520; --bs-heading-color: #93b4f4; --heading-color: #93b4f4; }
+
+  .install-box { color: var(--warm-900); }
+
+  .protocols h2, footer h6 { color: var(--heading-color); }
+
+  pre.code-sample { color: #93b4f4; }
+  pre.code-sample .cm { color: var(--warm-400); }
+
+  .install-box .copy-btn:hover { color: var(--warm-900); }
+}
