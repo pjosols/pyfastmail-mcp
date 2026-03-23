@@ -1,0 +1,68 @@
+[project]
+name = "pyfastmail-mcp"
+version = "0.1.0"
+description = "MCP server for Fastmail — email, contacts, calendar, and files via JMAP, CardDAV, CalDAV, and WebDAV"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.11"
+authors = [
+    {name = "Paul Olsen", email = "paul@wholeshoot.com"},
+]
+keywords = ["fastmail", "mcp", "jmap", "carddav", "caldav", "webdav"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "mcp[cli]>=1.0.0",
+    "requests>=2.32.0",
+    "vobject>=0.9.6",
+    "icalendar>=6.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "black>=24.0.0",
+    "isort>=5.13.0",
+    "ruff>=0.4.0",
+]
+
+[project.scripts]
+pyfastmail-mcp = "pyfastmail_mcp.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pyfastmail_mcp"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+
+[tool.ruff]
+line-length = 88
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=7.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/pjosols/pyfastmail-mcp"
+Repository = "https://github.com/pjosols/pyfastmail-mcp"
+Issues = "https://github.com/pjosols/pyfastmail-mcp/issues"

@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.env
+
+# Coverage
+.coverage
+htmlcov/
+
+# Dev artifacts (not shipped)
+.kiro/
+AGENT_TODO.md
+SMOKE_TEST.md
+SECURITY_REVIEW.md
+dev_loop.py
+run_dev_loop.sh
+smoke_test_loop.py
+smoke_test.py

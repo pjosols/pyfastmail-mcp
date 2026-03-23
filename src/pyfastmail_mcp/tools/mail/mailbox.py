@@ -1,0 +1,89 @@
+"""Mailbox tools."""
+
+import json
+
+import requests
+from mcp.server.fastmcp import FastMCP
+
+from pyfastmail_mcp.client import JMAPClient
+from pyfastmail_mcp.exceptions import FastmailError
+
+_MAILBOX_PROPS = ["id", "name", "role", "totalEmails", "unreadEmails", "parentId"]
+
+_SYSTEM_ROLES = {"inbox", "trash", "sent", "drafts", "archive", "spam", "junk"}
+
+
+def register(server: FastMCP, client: JMAPClient) -> None:
+    @server.tool()
+    async def mail_list_mailboxes() -> str:
+        """List all mailboxes with id, name, role, email counts, and parentId."""
+        try:
+            mailboxes = client.query_and_get("Mailbox", None, _MAILBOX_PROPS)
+            return json.dumps(mailboxes, indent=2)
+        except (FastmailError, requests.RequestException, ValueError) as exc:
+            return json.dumps({"error": str(exc)})
+
+    @server.tool()
+    async def mail_create_mailbox(name: str, parent_id: str | None = None) -> str:
+        """Create a new mailbox with the given name and optional parent mailbox ID."""
+        try:
+            create_args: dict = {"name": name}
+            if parent_id:
+                create_args["parentId"] = parent_id
+            data = client.set("Mailbox", create={"new": create_args})
+            created = data.get("created", {})
+            if "new" in created:
+                return json.dumps({"created": created["new"]})
+            not_created = data.get("notCreated", {})
+            if "new" in not_created:
+                err = not_created["new"]
+                return json.dumps(
+                    {"error": err.get("description", err.get("type", "unknown"))}
+                )
+            return json.dumps({"error": "Mailbox not created"})
+        except (FastmailError, requests.RequestException, ValueError) as exc:
+            return json.dumps({"error": str(exc)})
+
+    @server.tool()
+    async def mail_rename_mailbox(mailbox_id: str, new_name: str) -> str:
+        """Rename a mailbox by its ID."""
+        try:
+            data = client.set("Mailbox", update={mailbox_id: {"name": new_name}})
+            updated = data.get("updated", {})
+            if mailbox_id in updated:
+                return json.dumps({"updated": mailbox_id, "name": new_name})
+            not_updated = data.get("notUpdated", {})
+            if mailbox_id in not_updated:
+                err = not_updated[mailbox_id]
+                return json.dumps(
+                    {"error": err.get("description", err.get("type", "unknown"))}
+                )
+            return json.dumps({"error": "Mailbox not updated"})
+        except (FastmailError, requests.RequestException, ValueError) as exc:
+            return json.dumps({"error": str(exc)})
+
+    @server.tool()
+    async def mail_delete_mailbox(mailbox_id: str) -> str:
+        """Delete a mailbox by its ID. System mailboxes (inbox, trash, sent, etc.) cannot be deleted."""
+        try:
+            mailboxes = client.query_and_get("Mailbox", None, ["id", "role"])
+            for mb in mailboxes:
+                if mb["id"] == mailbox_id and mb.get("role") in _SYSTEM_ROLES:
+                    return json.dumps(
+                        {
+                            "error": f"Cannot delete system mailbox with role {mb['role']!r}"
+                        }
+                    )
+            data = client.set("Mailbox", destroy=[mailbox_id])
+            destroyed = data.get("destroyed", [])
+            if mailbox_id in destroyed:
+                return json.dumps({"destroyed": mailbox_id})
+            not_destroyed = data.get("notDestroyed", {})
+            if mailbox_id in not_destroyed:
+                err = not_destroyed[mailbox_id]
+                return json.dumps(
+                    {"error": err.get("description", err.get("type", "unknown"))}
+                )
+            return json.dumps({"error": "Mailbox not destroyed"})
+        except (FastmailError, requests.RequestException, ValueError) as exc:
+            return json.dumps({"error": str(exc)})

@@ -1,0 +1,305 @@
+"""Tests for tools/calendar/caldav.py — calendar_list_calendars."""
+
+import json
+from unittest.mock import MagicMock
+
+import requests
+from mcp.server.fastmcp import FastMCP
+
+from pyfastmail_mcp.tools.calendar.caldav import register
+
+
+def _client():
+    c = MagicMock()
+    c.email = "user@example.com"
+    return c
+
+
+def _tool(client, name):
+    server = FastMCP("test")
+    register(server, client)
+    return server._tool_manager._tools[name].fn
+
+
+def _mock_response(xml_text: str):
+    resp = MagicMock(spec=requests.Response)
+    resp.text = xml_text
+    resp.raise_for_status = MagicMock()
+    return resp
+
+
+_XML_TWO_CALENDARS = """<?xml version="1.0"?>
+<D:multistatus xmlns:D="DAV:"
+               xmlns:C="urn:ietf:params:xml:ns:caldav"
+               xmlns:A="http://apple.com/ns/ical/">
+  <D:response>
+    <D:href>/dav/principals/user/user@example.com/</D:href>
+    <D:propstat>
+      <D:prop><D:displayname>Home</D:displayname></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/dav/calendars/user/user@example.com/default/</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:displayname>Personal</D:displayname>
+        <D:resourcetype><D:collection/><C:calendar/></D:resourcetype>
+        <C:calendar-description>My calendar</C:calendar-description>
+        <A:calendar-color>#FF0000</A:calendar-color>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/dav/calendars/user/user@example.com/work/</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:displayname>Work</D:displayname>
+        <D:resourcetype><D:collection/><C:calendar/></D:resourcetype>
+        <C:calendar-description></C:calendar-description>
+        <A:calendar-color>#0000FF</A:calendar-color>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>"""
+
+_XML_NO_CALENDARS = """<?xml version="1.0"?>
+<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <D:response>
+    <D:href>/dav/principals/user/user@example.com/</D:href>
+    <D:propstat>
+      <D:prop><D:displayname>Home</D:displayname></D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>"""
+
+
+async def test_list_calendars_returns_calendars():
+    client = _client()
+    client.propfind.return_value = _mock_response(_XML_TWO_CALENDARS)
+    fn = _tool(client, "calendar_list_calendars")
+
+    result = json.loads(await fn())
+
+    assert len(result) == 2
+    assert result[0]["href"] == "/dav/calendars/user/user@example.com/default/"
+    assert result[0]["displayname"] == "Personal"
+    assert result[0]["description"] == "My calendar"
+    assert result[0]["color"] == "#FF0000"
+    assert result[1]["displayname"] == "Work"
+    assert result[1]["color"] == "#0000FF"
+
+
+async def test_list_calendars_skips_non_calendar_resources():
+    client = _client()
+    client.propfind.return_value = _mock_response(_XML_NO_CALENDARS)
+    fn = _tool(client, "calendar_list_calendars")
+
+    result = json.loads(await fn())
+
+    assert result == []
+
+
+async def test_list_calendars_calls_propfind_with_correct_url():
+    client = _client()
+    client.caldav_principal_url.return_value = "https://caldav.fastmail.com/dav/calendars/user/user@example.com/"
+    client.propfind.return_value = _mock_response(_XML_TWO_CALENDARS)
+    fn = _tool(client, "calendar_list_calendars")
+
+    await fn()
+
+    client.propfind.assert_called_once()
+    call_args = client.propfind.call_args
+    assert "user@example.com" in call_args[0][0]
+    assert call_args[1]["depth"] == "1"
+
+
+async def test_list_calendars_returns_error_on_exception():
+    client = _client()
+    client.propfind.side_effect = requests.RequestException("connection refused")
+    fn = _tool(client, "calendar_list_calendars")
+
+    result = json.loads(await fn())
+
+    assert "error" in result
+    assert "connection refused" in result["error"]
+
+
+async def test_list_calendars_missing_optional_fields():
+    xml = """<?xml version="1.0"?>
+<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <D:response>
+    <D:href>/dav/calendars/user/user@example.com/bare/</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:displayname></D:displayname>
+        <D:resourcetype><D:collection/><C:calendar/></D:resourcetype>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>"""
+    client = _client()
+    client.propfind.return_value = _mock_response(xml)
+    fn = _tool(client, "calendar_list_calendars")
+
+    result = json.loads(await fn())
+
+    assert len(result) == 1
+    assert result[0]["displayname"] == ""
+    assert result[0]["description"] == ""
+    assert result[0]["color"] == ""
+
+
+# --- calendar_list_events tests ---
+
+_ICAL_ONE_EVENT = """\
+BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:abc-123@fastmail.com
+SUMMARY:Team Meeting
+DTSTART:20260325T100000Z
+DTEND:20260325T110000Z
+LOCATION:Conference Room
+DESCRIPTION:Weekly sync
+END:VEVENT
+END:VCALENDAR"""
+
+_XML_ONE_EVENT = f"""<?xml version="1.0"?>
+<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <D:response>
+    <D:href>/dav/calendars/user/user@example.com/default/event1.ics</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getetag>"etag1"</D:getetag>
+        <C:calendar-data>{_ICAL_ONE_EVENT}</C:calendar-data>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>"""
+
+_XML_NO_EVENTS = """<?xml version="1.0"?>
+<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+</D:multistatus>"""
+
+
+async def test_list_events_returns_events():
+    client = _client()
+    client.report.return_value = _mock_response(_XML_ONE_EVENT)
+    fn = _tool(client, "calendar_list_events")
+
+    result = json.loads(await fn(calendar_href="/dav/calendars/user/user@example.com/default/"))
+
+    assert len(result) == 1
+    assert result[0]["uid"] == "abc-123@fastmail.com"
+    assert result[0]["summary"] == "Team Meeting"
+    assert result[0]["location"] == "Conference Room"
+    assert result[0]["description"] == "Weekly sync"
+    assert "2026-03-25" in result[0]["dtstart"]
+
+
+async def test_list_events_empty_calendar():
+    client = _client()
+    client.report.return_value = _mock_response(_XML_NO_EVENTS)
+    fn = _tool(client, "calendar_list_events")
+
+    result = json.loads(await fn(calendar_href="/dav/calendars/user/user@example.com/default/"))
+
+    assert result == []
+
+
+async def test_list_events_uses_explicit_dates():
+    client = _client()
+    client.report.return_value = _mock_response(_XML_NO_EVENTS)
+    fn = _tool(client, "calendar_list_events")
+
+    await fn(
+        calendar_href="/dav/calendars/user/user@example.com/default/",
+        start_date="2026-03-01",
+        end_date="2026-03-31",
+    )
+
+    body = client.report.call_args[0][1]
+    assert "20260301T000000Z" in body
+    assert "20260331T000000Z" in body
+
+
+async def test_list_events_prepends_caldav_base_for_relative_href():
+    from pyfastmail_mcp.dav_client import CALDAV_BASE
+
+    client = _client()
+    client.report.return_value = _mock_response(_XML_NO_EVENTS)
+    fn = _tool(client, "calendar_list_events")
+
+    await fn(calendar_href="/dav/calendars/user/user@example.com/default/")
+
+    url = client.report.call_args[0][0]
+    assert url.startswith(CALDAV_BASE)
+
+
+async def test_list_events_uses_absolute_href_unchanged():
+    client = _client()
+    client.report.return_value = _mock_response(_XML_NO_EVENTS)
+    fn = _tool(client, "calendar_list_events")
+
+    await fn(calendar_href="https://caldav.fastmail.com/dav/calendars/user/user@example.com/default/")
+
+    url = client.report.call_args[0][0]
+    assert url == "https://caldav.fastmail.com/dav/calendars/user/user@example.com/default/"
+
+
+async def test_list_events_returns_error_on_exception():
+    client = _client()
+    client.report.side_effect = requests.RequestException("timeout")
+    fn = _tool(client, "calendar_list_events")
+
+    result = json.loads(await fn(calendar_href="/dav/calendars/user/user@example.com/default/"))
+
+    assert "error" in result
+    assert "timeout" in result["error"]
+
+
+async def test_list_events_sorted_by_dtstart():
+    ical_two = """\
+BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:first@fastmail.com
+SUMMARY:First
+DTSTART:20260322T080000Z
+DTEND:20260322T090000Z
+END:VEVENT
+BEGIN:VEVENT
+UID:second@fastmail.com
+SUMMARY:Second
+DTSTART:20260321T080000Z
+DTEND:20260321T090000Z
+END:VEVENT
+END:VCALENDAR"""
+    xml = f"""<?xml version="1.0"?>
+<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <D:response>
+    <D:href>/dav/calendars/user/user@example.com/default/two.ics</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getetag>"etag2"</D:getetag>
+        <C:calendar-data>{ical_two}</C:calendar-data>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>"""
+    client = _client()
+    client.report.return_value = _mock_response(xml)
+    fn = _tool(client, "calendar_list_events")
+
+    result = json.loads(await fn(calendar_href="/dav/calendars/user/user@example.com/default/"))
+
+    assert len(result) == 2
+    assert result[0]["summary"] == "Second"
+    assert result[1]["summary"] == "First"

@@ -1,0 +1,166 @@
+"""Email read tools."""
+
+import json
+from datetime import datetime, timedelta, timezone
+
+import requests
+from mcp.server.fastmcp import FastMCP
+
+from pyfastmail_mcp.client import JMAPClient
+from pyfastmail_mcp.exceptions import FastmailError
+
+_EMAIL_PROPS = [
+    "id",
+    "subject",
+    "from",
+    "to",
+    "cc",
+    "bcc",
+    "replyTo",
+    "receivedAt",
+    "bodyValues",
+    "textBody",
+    "htmlBody",
+    "attachments",
+    "hasAttachment",
+]
+
+
+_SUMMARY_PROPS = ["id", "subject", "from", "receivedAt"]
+
+
+def register(server: FastMCP, client: JMAPClient) -> None:
+    @server.tool()
+    async def mail_search_emails(
+        text: str | None = None,
+        from_: str | None = None,
+        to: str | None = None,
+        subject: str | None = None,
+        has_attachment: bool | None = None,
+        limit: int = 20,
+        newest_first: bool = True,
+    ) -> str:
+        """Search emails with optional filters. Returns id, subject, from, date.
+
+        Args:
+            text: Full-text search query.
+            from_: Filter by sender address.
+            to: Filter by recipient address.
+            subject: Filter by subject text.
+            has_attachment: Filter by attachment presence.
+            limit: Max results (default 20).
+            newest_first: Sort newest first (default True).
+        """
+        try:
+            filter_: dict = {}
+            if text:
+                filter_["text"] = text
+            if from_:
+                filter_["from"] = from_
+            if to:
+                filter_["to"] = to
+            if subject:
+                filter_["subject"] = subject
+            if has_attachment is not None:
+                filter_["hasAttachment"] = has_attachment
+
+            sort = [{"property": "receivedAt", "isAscending": not newest_first}]
+            emails = client.query_and_get(
+                "Email",
+                filter_ or None,
+                _SUMMARY_PROPS,
+                sort=sort,
+                limit=limit,
+            )
+            return json.dumps(emails, indent=2)
+        except (FastmailError, requests.RequestException, ValueError) as exc:
+            return json.dumps({"error": str(exc)})
+
+    @server.tool()
+    async def mail_get_recent_emails(days: int = 7, limit: int = 20) -> str:
+        """Get emails received in the last N days.
+
+        Args:
+            days: How many days back to look (default 7).
+            limit: Max results (default 20).
+        """
+        try:
+            since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            )
+            emails = client.query_and_get(
+                "Email",
+                {"after": since},
+                _SUMMARY_PROPS,
+                sort=[{"property": "receivedAt", "isAscending": False}],
+                limit=limit,
+            )
+            return json.dumps(emails, indent=2)
+        except (FastmailError, requests.RequestException, ValueError) as exc:
+            return json.dumps({"error": str(exc)})
+
+    @server.tool()
+    async def mail_get_email(email_id: str, prefer_html: bool = False) -> str:
+        """Get a single email by ID with full body content and attachment metadata.
+
+        Args:
+            email_id: The JMAP email ID.
+            prefer_html: Return HTML body if available; defaults to plain text.
+        """
+        try:
+            account_id = client.account_id
+            responses = client.call(
+                ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+                [
+                    [
+                        "Email/get",
+                        {
+                            "accountId": account_id,
+                            "ids": [email_id],
+                            "properties": _EMAIL_PROPS,
+                            "fetchAllBodyValues": True,
+                        },
+                        "g",
+                    ]
+                ],
+            )
+            _, data, _ = responses[0]
+            emails = data.get("list", [])
+            if not emails:
+                return json.dumps({"error": f"Email {email_id!r} not found"})
+
+            email = emails[0]
+            body = _extract_body(email, prefer_html)
+            attachments = [
+                {"name": a.get("name"), "type": a.get("type"), "size": a.get("size")}
+                for a in (email.get("attachments") or [])
+            ]
+            return json.dumps(
+                {
+                    "id": email.get("id"),
+                    "subject": email.get("subject"),
+                    "from": email.get("from"),
+                    "to": email.get("to"),
+                    "cc": email.get("cc"),
+                    "receivedAt": email.get("receivedAt"),
+                    "body": body,
+                    "hasAttachment": email.get("hasAttachment"),
+                    "attachments": attachments,
+                },
+                indent=2,
+            )
+        except (FastmailError, requests.RequestException, ValueError) as exc:
+            return json.dumps({"error": str(exc)})
+
+
+def _extract_body(email: dict, prefer_html: bool) -> str | None:
+    """Return the best available body text from an email."""
+    body_values = email.get("bodyValues") or {}
+    parts = email.get("htmlBody" if prefer_html else "textBody") or []
+    if not parts and prefer_html:
+        parts = email.get("textBody") or []
+    for part in parts:
+        part_id = part.get("partId")
+        if part_id and part_id in body_values:
+            return body_values[part_id].get("value")
+    return None
