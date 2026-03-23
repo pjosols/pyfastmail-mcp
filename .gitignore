@@ -22,7 +22,7 @@ htmlcov/
 
 # Dev artifacts (not shipped)
 .kiro/
-docs/
+docs/SECURITY_REVIEW.md
 AGENT_TODO.md
 SMOKE_TEST.md
 SECURITY_REVIEW.md
