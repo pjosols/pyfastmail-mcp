@@ -8,10 +8,10 @@ from pyfastmail_mcp.dav_client import DAVClient
 
 def register_all(server: FastMCP, client: JMAPClient, dav_client: DAVClient) -> None:
     """Register every tool domain with the server."""
-    from .mail import register_all as register_mail
-    from .contacts import register_all as register_contacts
     from .calendar import register_all as register_calendar
+    from .contacts import register_all as register_contacts
     from .files import register_all as register_files
+    from .mail import register_all as register_mail
 
     register_mail(server, client)
     register_contacts(server, dav_client)

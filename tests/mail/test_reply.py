@@ -1,10 +1,9 @@
 """Tests for mail_reply_to_email in tools/mail/reply.py."""
 
 import json
-
-import requests
 from unittest.mock import MagicMock
 
+import requests
 from mcp.server.fastmcp import FastMCP
 
 from pyfastmail_mcp.tools.mail.reply import register
@@ -159,7 +158,9 @@ async def test_reply_identity_not_found():
         _email_get_response(),
         [("Identity/get", {"list": []}, "i")],
     ]
-    result = await _tool(client, "mail_reply_to_email")(email_id="orig1", text_body="reply")
+    result = await _tool(client, "mail_reply_to_email")(
+        email_id="orig1", text_body="reply"
+    )
     data = json.loads(result)
     assert "error" in data
 
@@ -178,7 +179,9 @@ async def test_reply_submission_not_created():
             ),
         ],
     ]
-    result = await _tool(client, "mail_reply_to_email")(email_id="orig1", text_body="reply")
+    result = await _tool(client, "mail_reply_to_email")(
+        email_id="orig1", text_body="reply"
+    )
     data = json.loads(result)
     assert "error" in data
 
@@ -186,7 +189,9 @@ async def test_reply_submission_not_created():
 async def test_reply_client_error():
     client = mock_client()
     client.call.side_effect = requests.RequestException("network failure")
-    result = await _tool(client, "mail_reply_to_email")(email_id="orig1", text_body="reply")
+    result = await _tool(client, "mail_reply_to_email")(
+        email_id="orig1", text_body="reply"
+    )
     data = json.loads(result)
     assert "error" in data
     assert "network failure" in data["error"]

@@ -1,4 +1,4 @@
-"""Tests for calendar_get_event in tools/calendar/caldav.py."""
+"""Tests for calendar_get_event in tools/calendar/caldav_get_event.py."""
 
 import json
 from unittest.mock import MagicMock
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import requests
 from mcp.server.fastmcp import FastMCP
 
-from pyfastmail_mcp.tools.calendar.caldav import register
+from pyfastmail_mcp.tools.calendar.caldav_get_event import register
 
 
 def _client():

@@ -9,6 +9,8 @@ from pyfastmail_mcp.client import USING_SUBMISSION, JMAPClient
 from pyfastmail_mcp.exceptions import FastmailError, IdentityNotFoundError
 from pyfastmail_mcp.tools.mail.identities import _find_identity
 
+_MAX_RECIPIENTS = 50
+
 
 def register(server: FastMCP, client: JMAPClient) -> None:
     @server.tool()
@@ -29,10 +31,24 @@ def register(server: FastMCP, client: JMAPClient) -> None:
             text_body: Plain-text body content.
             cc: Optional list of CC addresses.
             bcc: Optional list of BCC addresses.
-            html_body: Optional HTML body content.
+            html_body: Optional HTML body content. Passed verbatim to the JMAP
+                API with no sanitisation. When this tool is driven by an AI
+                agent that processes external content, ensure the html_body
+                value originates from a trusted source to prevent prompt-
+                injection attacks from causing malicious emails to be sent.
             identity_id: Sender identity ID; auto-selects first identity if omitted.
         """
         try:
+            total_recipients = len(to) + len(cc or []) + len(bcc or [])
+            if total_recipients > _MAX_RECIPIENTS:
+                return json.dumps(
+                    {
+                        "error": (
+                            f"Too many recipients ({total_recipients}); "
+                            f"limit is {_MAX_RECIPIENTS}"
+                        )
+                    }
+                )
             identity = _find_identity(client, identity_id)
             account_id = client.account_id
 

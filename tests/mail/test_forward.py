@@ -1,10 +1,9 @@
 """Tests for mail_forward_email in tools/mail/forward.py."""
 
 import json
-
-import requests
 from unittest.mock import MagicMock
 
+import requests
 from mcp.server.fastmcp import FastMCP
 
 from pyfastmail_mcp.tools.mail.forward import register
@@ -72,7 +71,9 @@ async def test_forward_adds_fwd_prefix():
         _identity_response(),
         _send_response(),
     ]
-    await _tool(client, "mail_forward_email")(email_id="orig1", to=["carol@example.com"])
+    await _tool(client, "mail_forward_email")(
+        email_id="orig1", to=["carol@example.com"]
+    )
     email_obj = client.call.call_args_list[2][0][1][0][1]["create"]["draft"]
     assert email_obj["subject"] == "Fwd: Hello"
 
@@ -85,7 +86,9 @@ async def test_forward_no_double_fwd_prefix():
         _identity_response(),
         _send_response(),
     ]
-    await _tool(client, "mail_forward_email")(email_id="orig1", to=["carol@example.com"])
+    await _tool(client, "mail_forward_email")(
+        email_id="orig1", to=["carol@example.com"]
+    )
     email_obj = client.call.call_args_list[2][0][1][0][1]["create"]["draft"]
     assert email_obj["subject"] == "Fwd: Hello"
 

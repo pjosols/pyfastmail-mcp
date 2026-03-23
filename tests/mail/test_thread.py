@@ -2,9 +2,8 @@
 
 import json
 
-import requests
-
 import pytest
+import requests
 from mcp.server.fastmcp import FastMCP
 
 from pyfastmail_mcp.tools.mail.thread import register

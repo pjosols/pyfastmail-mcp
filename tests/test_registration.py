@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 from mcp.server.fastmcp import FastMCP
 
 from pyfastmail_mcp.tools import register_all
-from pyfastmail_mcp.tools.mail import register_all as register_mail
 from pyfastmail_mcp.tools.contacts import register_all as register_contacts
+from pyfastmail_mcp.tools.mail import register_all as register_mail
 
 
 def _jmap_client():

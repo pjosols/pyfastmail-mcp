@@ -32,7 +32,9 @@ async def test_files_upload_success():
     raw = b"file content"
     encoded = base64.b64encode(raw).decode()
     result = json.loads(
-        await _tool(client, "files_upload")(path="/docs/f.txt", content=encoded, content_type="text/plain")
+        await _tool(client, "files_upload")(
+            path="/docs/f.txt", content=encoded, content_type="text/plain"
+        )
     )
     assert result["uploaded"] is True
     assert result["path"] == "/docs/f.txt"
@@ -46,7 +48,9 @@ async def test_files_upload_error():
     client = _client()
     client.put_bytes.side_effect = requests.RequestException("upload failed")
     result = json.loads(
-        await _tool(client, "files_upload")(path="/f.txt", content=base64.b64encode(b"x").decode())
+        await _tool(client, "files_upload")(
+            path="/f.txt", content=base64.b64encode(b"x").decode()
+        )
     )
     assert "error" in result
 

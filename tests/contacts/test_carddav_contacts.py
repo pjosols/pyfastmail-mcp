@@ -1,7 +1,7 @@
 """Tests for contacts_get_contact and contacts_create_contact tools."""
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 import requests
@@ -123,7 +123,9 @@ async def test_get_contact_error():
 # --- contacts_create_contact ---
 
 _AB_HREF = "/dav/addressbooks/user/user@example.com/Default/"
-_AB_HREF_ABS = "https://carddav.fastmail.com/dav/addressbooks/user/user@example.com/Default/"
+_AB_HREF_ABS = (
+    "https://carddav.fastmail.com/dav/addressbooks/user/user@example.com/Default/"
+)
 
 
 @pytest.mark.asyncio
@@ -180,7 +182,7 @@ async def test_create_contact_minimal():
     client.put.return_value = _mock_response("")
     client.get.return_value = _mock_response(_VCARD_MINIMAL)
 
-    result = json.loads(
+    json.loads(
         await _write_tool(client, "contacts_create_contact")(
             address_book_href=_AB_HREF_ABS,
             name="Minimal Person",

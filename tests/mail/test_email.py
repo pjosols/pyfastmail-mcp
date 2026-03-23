@@ -1,11 +1,10 @@
 """Tests for tools/mail/email.py."""
 
 import json
-
-import requests
 from unittest.mock import MagicMock
 
 import pytest
+import requests
 from mcp.server.fastmcp import FastMCP
 
 from pyfastmail_mcp.tools.mail.email import _extract_body, register

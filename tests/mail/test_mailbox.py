@@ -1,11 +1,10 @@
 """Tests for tools/mail/mailbox.py."""
 
 import json
-
-import requests
 from unittest.mock import MagicMock
 
 import pytest
+import requests
 from mcp.server.fastmcp import FastMCP
 
 from pyfastmail_mcp.tools.mail.mailbox import register
@@ -85,7 +84,9 @@ async def test_create_mailbox_ok(mock_client):
 
 async def test_create_mailbox_with_parent(mock_client):
     mock_client.set.return_value = {"created": {"new": {"id": "mb4", "name": "Sub"}}}
-    result = await _get_tool(mock_client, "mail_create_mailbox")(name="Sub", parent_id="mb1")
+    result = await _get_tool(mock_client, "mail_create_mailbox")(
+        name="Sub", parent_id="mb1"
+    )
     data = json.loads(result)
     assert data["created"]["id"] == "mb4"
     mock_client.set.assert_called_once_with(

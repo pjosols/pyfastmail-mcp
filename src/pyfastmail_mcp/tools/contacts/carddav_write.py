@@ -2,15 +2,18 @@
 
 import json
 import uuid
+from urllib.parse import quote
 
 import requests
 import vobject
 from mcp.server.fastmcp import FastMCP
 
-from pyfastmail_mcp.dav_client import CARDDAV_BASE, DAVClient, PROPFIND_ADDRESSBOOK
+from pyfastmail_mcp.dav_client import CARDDAV_BASE, PROPFIND_ADDRESSBOOK, DAVClient
 from pyfastmail_mcp.exceptions import FastmailError
-
-from pyfastmail_mcp.tools.contacts.carddav import _parse_address_books, _parse_vcard_full
+from pyfastmail_mcp.tools.contacts.carddav import (
+    _parse_address_books,
+    _parse_vcard_full,
+)
 
 
 def _build_vcard(
@@ -43,9 +46,10 @@ def _build_vcard(
 
 
 def _default_address_book(dav_client: DAVClient) -> str:
-    principal_url = dav_client.carddav_principal_url()
-    resp = dav_client.propfind(principal_url, depth="1", body=PROPFIND_ADDRESSBOOK)
-    books = _parse_address_books(resp.text, principal_url)
+    home_url = dav_client.discover_carddav_home()
+    dav_client.validate_dav_url(home_url)
+    resp = dav_client.propfind(home_url, depth="1", body=PROPFIND_ADDRESSBOOK)
+    books = _parse_address_books(resp.text, home_url)
     if not books:
         raise ValueError("No address books found")
     return books[0]["href"]
@@ -53,7 +57,13 @@ def _default_address_book(dav_client: DAVClient) -> str:
 
 def _apply_updates(v: vobject.vCard, **fields) -> None:
     """Overwrite vCard fields that are explicitly provided (non-None)."""
-    mapping = {"name": "fn", "email": "email", "phone": "tel", "org": "org", "notes": "note"}
+    mapping = {
+        "name": "fn",
+        "email": "email",
+        "phone": "tel",
+        "org": "org",
+        "notes": "note",
+    }
     for field, component in mapping.items():
         if fields.get(field) is None:
             continue
@@ -62,6 +72,8 @@ def _apply_updates(v: vobject.vCard, **fields) -> None:
         if component in v.contents:
             del v.contents[component]
         if field == "name":
+            if "n" in v.contents:
+                del v.contents["n"]
             v.add("fn").value = value
             n = v.add("n")
             parts = value.split(" ", 1)
@@ -108,7 +120,7 @@ def register(server: FastMCP, dav_client: DAVClient) -> None:
             if not base.endswith("/"):
                 base += "/"
 
-            url = f"{base}{uid}.vcf"
+            url = f"{base}{quote(uid, safe='')}.vcf"
             dav_client.validate_dav_url(url)
             dav_client.put(url, vcard_text, "text/vcard")
 

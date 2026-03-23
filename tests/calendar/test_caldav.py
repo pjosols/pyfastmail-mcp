@@ -79,11 +79,14 @@ _XML_NO_CALENDARS = """<?xml version="1.0"?>
 
 async def test_list_calendars_returns_calendars():
     client = _client()
+    home_url = "https://caldav.fastmail.com/dav/calendars/user/user@example.com/"
+    client.discover_caldav_home.return_value = home_url
     client.propfind.return_value = _mock_response(_XML_TWO_CALENDARS)
     fn = _tool(client, "calendar_list_calendars")
 
     result = json.loads(await fn())
 
+    client.discover_caldav_home.assert_called_once()
     assert len(result) == 2
     assert result[0]["href"] == "/dav/calendars/user/user@example.com/default/"
     assert result[0]["displayname"] == "Personal"
@@ -95,6 +98,8 @@ async def test_list_calendars_returns_calendars():
 
 async def test_list_calendars_skips_non_calendar_resources():
     client = _client()
+    home_url = "https://caldav.fastmail.com/dav/calendars/user/user@example.com/"
+    client.discover_caldav_home.return_value = home_url
     client.propfind.return_value = _mock_response(_XML_NO_CALENDARS)
     fn = _tool(client, "calendar_list_calendars")
 
@@ -105,7 +110,8 @@ async def test_list_calendars_skips_non_calendar_resources():
 
 async def test_list_calendars_calls_propfind_with_correct_url():
     client = _client()
-    client.caldav_principal_url.return_value = "https://caldav.fastmail.com/dav/calendars/user/user@example.com/"
+    home_url = "https://caldav.fastmail.com/dav/calendars/user/user@example.com/"
+    client.discover_caldav_home.return_value = home_url
     client.propfind.return_value = _mock_response(_XML_TWO_CALENDARS)
     fn = _tool(client, "calendar_list_calendars")
 
@@ -113,8 +119,21 @@ async def test_list_calendars_calls_propfind_with_correct_url():
 
     client.propfind.assert_called_once()
     call_args = client.propfind.call_args
-    assert "user@example.com" in call_args[0][0]
+    assert call_args[0][0] == home_url
     assert call_args[1]["depth"] == "1"
+
+
+async def test_list_calendars_discovery_error():
+    client = _client()
+    import requests as req
+
+    client.discover_caldav_home.side_effect = req.RequestException("timeout")
+    fn = _tool(client, "calendar_list_calendars")
+
+    result = json.loads(await fn())
+
+    assert "error" in result
+    assert "timeout" in result["error"]
 
 
 async def test_list_calendars_returns_error_on_exception():
@@ -193,7 +212,9 @@ async def test_list_events_returns_events():
     client.report.return_value = _mock_response(_XML_ONE_EVENT)
     fn = _tool(client, "calendar_list_events")
 
-    result = json.loads(await fn(calendar_href="/dav/calendars/user/user@example.com/default/"))
+    result = json.loads(
+        await fn(calendar_href="/dav/calendars/user/user@example.com/default/")
+    )
 
     assert len(result) == 1
     assert result[0]["uid"] == "abc-123@fastmail.com"
@@ -208,7 +229,9 @@ async def test_list_events_empty_calendar():
     client.report.return_value = _mock_response(_XML_NO_EVENTS)
     fn = _tool(client, "calendar_list_events")
 
-    result = json.loads(await fn(calendar_href="/dav/calendars/user/user@example.com/default/"))
+    result = json.loads(
+        await fn(calendar_href="/dav/calendars/user/user@example.com/default/")
+    )
 
     assert result == []
 
@@ -247,10 +270,15 @@ async def test_list_events_uses_absolute_href_unchanged():
     client.report.return_value = _mock_response(_XML_NO_EVENTS)
     fn = _tool(client, "calendar_list_events")
 
-    await fn(calendar_href="https://caldav.fastmail.com/dav/calendars/user/user@example.com/default/")
+    await fn(
+        calendar_href="https://caldav.fastmail.com/dav/calendars/user/user@example.com/default/"
+    )
 
     url = client.report.call_args[0][0]
-    assert url == "https://caldav.fastmail.com/dav/calendars/user/user@example.com/default/"
+    assert (
+        url
+        == "https://caldav.fastmail.com/dav/calendars/user/user@example.com/default/"
+    )
 
 
 async def test_list_events_returns_error_on_exception():
@@ -258,7 +286,9 @@ async def test_list_events_returns_error_on_exception():
     client.report.side_effect = requests.RequestException("timeout")
     fn = _tool(client, "calendar_list_events")
 
-    result = json.loads(await fn(calendar_href="/dav/calendars/user/user@example.com/default/"))
+    result = json.loads(
+        await fn(calendar_href="/dav/calendars/user/user@example.com/default/")
+    )
 
     assert "error" in result
     assert "timeout" in result["error"]
@@ -298,7 +328,9 @@ END:VCALENDAR"""
     client.report.return_value = _mock_response(xml)
     fn = _tool(client, "calendar_list_events")
 
-    result = json.loads(await fn(calendar_href="/dav/calendars/user/user@example.com/default/"))
+    result = json.loads(
+        await fn(calendar_href="/dav/calendars/user/user@example.com/default/")
+    )
 
     assert len(result) == 2
     assert result[0]["summary"] == "Second"

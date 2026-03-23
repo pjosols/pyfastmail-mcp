@@ -1,13 +1,13 @@
 """CardDAV tools — contacts via CardDAV (RFC 6352)."""
 
 import json
-from xml.etree import ElementTree as ET
 
+import defusedxml.ElementTree as ET
 import requests
 import vobject
 from mcp.server.fastmcp import FastMCP
 
-from pyfastmail_mcp.dav_client import CARDDAV_BASE, DAVClient, PROPFIND_ADDRESSBOOK
+from pyfastmail_mcp.dav_client import CARDDAV_BASE, PROPFIND_ADDRESSBOOK, DAVClient
 from pyfastmail_mcp.exceptions import FastmailError
 
 _DAV_NS = "DAV:"
@@ -48,12 +48,12 @@ def _parse_address_books(xml_text: str, base_url: str) -> list[dict]:
 
         desc_el = response.find(f".//{_tag(_CARD_NS, 'addressbook-description')}")
         description = (
-            desc_el.text.strip()
-            if desc_el is not None and desc_el.text
-            else ""
+            desc_el.text.strip() if desc_el is not None and desc_el.text else ""
         )
 
-        results.append({"href": href, "displayname": displayname, "description": description})
+        results.append(
+            {"href": href, "displayname": displayname, "description": description}
+        )
     return results
 
 
@@ -110,9 +110,10 @@ def register(server: FastMCP, dav_client: DAVClient) -> None:
     async def contacts_list_address_books() -> str:
         """List all CardDAV address books for the authenticated Fastmail account."""
         try:
-            principal_url = dav_client.carddav_principal_url()
-            resp = dav_client.propfind(principal_url, depth="1", body=PROPFIND_ADDRESSBOOK)
-            books = _parse_address_books(resp.text, principal_url)
+            home_url = dav_client.discover_carddav_home()
+            dav_client.validate_dav_url(home_url)
+            resp = dav_client.propfind(home_url, depth="1", body=PROPFIND_ADDRESSBOOK)
+            books = _parse_address_books(resp.text, home_url)
             return json.dumps(books, indent=2)
         except (FastmailError, requests.RequestException, ValueError) as exc:
             return json.dumps({"error": str(exc)})
@@ -144,9 +145,12 @@ def register(server: FastMCP, dav_client: DAVClient) -> None:
         """
         try:
             if not address_book_href:
-                principal_url = dav_client.carddav_principal_url()
-                resp = dav_client.propfind(principal_url, depth="1", body=PROPFIND_ADDRESSBOOK)
-                books = _parse_address_books(resp.text, principal_url)
+                home_url = dav_client.discover_carddav_home()
+                dav_client.validate_dav_url(home_url)
+                resp = dav_client.propfind(
+                    home_url, depth="1", body=PROPFIND_ADDRESSBOOK
+                )
+                books = _parse_address_books(resp.text, home_url)
                 if not books:
                     return json.dumps([])
                 address_book_href = books[0]["href"]

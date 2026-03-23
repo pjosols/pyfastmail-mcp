@@ -44,6 +44,17 @@ ORG:Acme
 NOTE:Old note
 END:VCARD"""
 
+# vCard with a structured N: field — triggers ValidateError if _apply_updates
+# doesn't delete the existing n component before adding a new one.
+_VCARD_WITH_N = """\
+BEGIN:VCARD
+VERSION:3.0
+UID:uid-alice
+FN:Alice Smith
+N:Smith;Alice;;;
+EMAIL:alice@example.com
+END:VCARD"""
+
 
 # --- contacts_update_contact ---
 
@@ -60,10 +71,32 @@ async def test_update_contact_name():
     )
 
     assert result["name"] == "Alice Jones"
-    _, vcard_body, _, = client.put.call_args[0]
+    (
+        _,
+        vcard_body,
+        _,
+    ) = client.put.call_args[0]
     assert "Alice Jones" in vcard_body
     # ETag forwarded
-    assert client.put.call_args[1].get("etag") == '"abc"' or '"abc"' in str(client.put.call_args)
+    assert client.put.call_args[1].get("etag") == '"abc"' or '"abc"' in str(
+        client.put.call_args
+    )
+
+
+@pytest.mark.asyncio
+async def test_update_contact_name_with_existing_n_field():
+    """Updating name on a vCard that already has N: must not raise ValidateError."""
+    client = _client()
+    client.get.return_value = _mock_response(_VCARD_WITH_N, {})
+    client.put.return_value = _mock_response()
+
+    result = json.loads(
+        await _tool(client, "contacts_update_contact")(href=_HREF, name="Bob Jones")
+    )
+
+    assert result["name"] == "Bob Jones"
+    _, vcard_body, _ = client.put.call_args[0]
+    assert "Bob Jones" in vcard_body
 
 
 @pytest.mark.asyncio
@@ -74,7 +107,9 @@ async def test_update_contact_email():
     client.put.return_value = _mock_response()
 
     result = json.loads(
-        await _tool(client, "contacts_update_contact")(href=_HREF, email="new@example.com")
+        await _tool(client, "contacts_update_contact")(
+            href=_HREF, email="new@example.com"
+        )
     )
 
     assert "new@example.com" in result["emails"]
@@ -105,9 +140,7 @@ async def test_update_contact_no_fields_changed():
     client.get.return_value = _mock_response(_VCARD, {})
     client.put.return_value = _mock_response()
 
-    result = json.loads(
-        await _tool(client, "contacts_update_contact")(href=_HREF)
-    )
+    result = json.loads(await _tool(client, "contacts_update_contact")(href=_HREF))
 
     assert result["name"] == "Alice Smith"
     assert result["emails"] == ["alice@example.com"]
@@ -151,9 +184,7 @@ async def test_delete_contact_absolute_href():
     client = _client()
     client.delete.return_value = _mock_response()
 
-    result = json.loads(
-        await _tool(client, "contacts_delete_contact")(href=_HREF)
-    )
+    result = json.loads(await _tool(client, "contacts_delete_contact")(href=_HREF))
 
     client.delete.assert_called_once_with(_HREF)
     assert result["deleted"] == _HREF
@@ -167,9 +198,7 @@ async def test_delete_contact_relative_href():
     client = _client()
     client.delete.return_value = _mock_response()
 
-    result = json.loads(
-        await _tool(client, "contacts_delete_contact")(href=_REL_HREF)
-    )
+    result = json.loads(await _tool(client, "contacts_delete_contact")(href=_REL_HREF))
 
     client.delete.assert_called_once_with(CARDDAV_BASE + _REL_HREF)
     assert result["deleted"] == _REL_HREF
@@ -181,9 +210,7 @@ async def test_delete_contact_error():
     client = _client()
     client.delete.side_effect = requests.RequestException("forbidden")
 
-    result = json.loads(
-        await _tool(client, "contacts_delete_contact")(href=_HREF)
-    )
+    result = json.loads(await _tool(client, "contacts_delete_contact")(href=_HREF))
 
     assert "error" in result
     assert "forbidden" in result["error"]

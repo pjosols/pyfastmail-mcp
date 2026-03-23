@@ -220,7 +220,9 @@ async def test_health_check_error(mock_client):
 
     from pyfastmail_mcp.tools.mail.health import register
 
-    type(mock_client).account_id = PropertyMock(side_effect=AuthenticationError("bad token"))
+    type(mock_client).account_id = PropertyMock(
+        side_effect=AuthenticationError("bad token")
+    )
     server = FastMCP("test")
     register(server, mock_client)
 

@@ -1,10 +1,9 @@
 """Tests for mail_list_identities in tools/mail/identities.py."""
 
 import json
-
-import requests
 from unittest.mock import MagicMock
 
+import requests
 from mcp.server.fastmcp import FastMCP
 
 from pyfastmail_mcp.tools.mail.identities import register

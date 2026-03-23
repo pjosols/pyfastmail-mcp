@@ -2,8 +2,8 @@
 
 import json
 from datetime import datetime, timedelta, timezone
-from xml.etree import ElementTree as ET
 
+import defusedxml.ElementTree as ET
 import icalendar
 import requests
 from mcp.server.fastmcp import FastMCP
@@ -88,38 +88,6 @@ def _calendar_query_xml(start: str, end: str) -> str:
 </C:calendar-query>"""
 
 
-def _parse_event_full(ical_text: str, href: str) -> dict:
-    """Parse a single iCalendar resource into a detailed event dict."""
-    cal = icalendar.Calendar.from_ical(ical_text)
-    for comp in cal.walk():
-        if comp.name != "VEVENT":
-            continue
-        dtstart = comp.get("DTSTART")
-        dtend = comp.get("DTEND")
-        attendees_raw = comp.get("ATTENDEE")
-        if attendees_raw is None:
-            attendees = []
-        elif isinstance(attendees_raw, list):
-            attendees = [str(a) for a in attendees_raw]
-        else:
-            attendees = [str(attendees_raw)]
-        rrule = comp.get("RRULE")
-        return {
-            "href": href,
-            "uid": str(comp.get("UID", "")),
-            "summary": str(comp.get("SUMMARY", "")),
-            "dtstart": str(dtstart.dt) if dtstart else "",
-            "dtend": str(dtend.dt) if dtend else "",
-            "location": str(comp.get("LOCATION", "")),
-            "description": str(comp.get("DESCRIPTION", "")),
-            "attendees": attendees,
-            "rrule": str(rrule.to_ical().decode()) if rrule else "",
-            "status": str(comp.get("STATUS", "")),
-            "organizer": str(comp.get("ORGANIZER", "")),
-        }
-    return {}
-
-
 def _parse_events(xml_text: str) -> list[dict]:
     root = ET.fromstring(xml_text)
     results = []
@@ -141,15 +109,17 @@ def _parse_events(xml_text: str) -> list[dict]:
                 continue
             dtstart = comp.get("DTSTART")
             dtend = comp.get("DTEND")
-            results.append({
-                "href": href,
-                "uid": str(comp.get("UID", "")),
-                "summary": str(comp.get("SUMMARY", "")),
-                "dtstart": str(dtstart.dt) if dtstart else "",
-                "dtend": str(dtend.dt) if dtend else "",
-                "location": str(comp.get("LOCATION", "")),
-                "description": str(comp.get("DESCRIPTION", "")),
-            })
+            results.append(
+                {
+                    "href": href,
+                    "uid": str(comp.get("UID", "")),
+                    "summary": str(comp.get("SUMMARY", "")),
+                    "dtstart": str(dtstart.dt) if dtstart else "",
+                    "dtend": str(dtend.dt) if dtend else "",
+                    "location": str(comp.get("LOCATION", "")),
+                    "description": str(comp.get("DESCRIPTION", "")),
+                }
+            )
     results.sort(key=lambda e: e["dtstart"])
     return results
 
@@ -159,7 +129,9 @@ def register(server: FastMCP, dav_client: DAVClient) -> None:
     async def calendar_list_calendars() -> str:
         """List all CalDAV calendars for the authenticated Fastmail account."""
         try:
-            resp = dav_client.propfind(dav_client.caldav_principal_url(), depth="1", body=_PROPFIND_CALENDARS)
+            home_url = dav_client.discover_caldav_home()
+            dav_client.validate_dav_url(home_url)
+            resp = dav_client.propfind(home_url, depth="1", body=_PROPFIND_CALENDARS)
             calendars = _parse_calendars(resp.text)
             return json.dumps(calendars, indent=2)
         except (FastmailError, requests.RequestException, ValueError) as exc:
@@ -180,33 +152,29 @@ def register(server: FastMCP, dav_client: DAVClient) -> None:
         """
         try:
             now = datetime.now(tz=timezone.utc)
-            start_dt = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc) if start_date else now.replace(hour=0, minute=0, second=0, microsecond=0)
-            end_dt = datetime.fromisoformat(end_date).replace(tzinfo=timezone.utc) if end_date else start_dt + timedelta(days=7)
+            start_dt = (
+                datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+                if start_date
+                else now.replace(hour=0, minute=0, second=0, microsecond=0)
+            )
+            end_dt = (
+                datetime.fromisoformat(end_date).replace(tzinfo=timezone.utc)
+                if end_date
+                else start_dt + timedelta(days=7)
+            )
 
             start_str = start_dt.strftime("%Y%m%dT%H%M%SZ")
             end_str = end_dt.strftime("%Y%m%dT%H%M%SZ")
 
-            url = f"{CALDAV_BASE}{calendar_href}" if not calendar_href.startswith("http") else calendar_href
+            url = (
+                f"{CALDAV_BASE}{calendar_href}"
+                if not calendar_href.startswith("http")
+                else calendar_href
+            )
             dav_client.validate_dav_url(url)
             body = _calendar_query_xml(start_str, end_str)
             resp = dav_client.report(url, body)
             events = _parse_events(resp.text)
             return json.dumps(events, indent=2)
-        except (FastmailError, requests.RequestException, ValueError) as exc:
-            return json.dumps({"error": str(exc)})
-
-    @server.tool()
-    async def calendar_get_event(href: str) -> str:
-        """Get full details of a single CalDAV event by its href.
-
-        Args:
-            href: The href/URL path of the .ics resource (as returned by calendar_list_events).
-        """
-        try:
-            url = href if href.startswith("http") else f"{CALDAV_BASE}{href}"
-            dav_client.validate_dav_url(url)
-            resp = dav_client.get(url)
-            event = _parse_event_full(resp.text, href)
-            return json.dumps(event, indent=2)
         except (FastmailError, requests.RequestException, ValueError) as exc:
             return json.dumps({"error": str(exc)})

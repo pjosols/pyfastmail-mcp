@@ -2,8 +2,9 @@
 
 import base64
 import json
-from xml.etree import ElementTree as ET
+import posixpath
 
+import defusedxml.ElementTree as ET
 import requests
 from mcp.server.fastmcp import FastMCP
 
@@ -67,14 +68,16 @@ def _parse_propfind(xml_text: str) -> list[dict]:
             else ""
         )
 
-        results.append({
-            "href": href,
-            "displayname": displayname,
-            "is_collection": is_collection,
-            "content_type": content_type,
-            "size": size,
-            "last_modified": last_modified,
-        })
+        results.append(
+            {
+                "href": href,
+                "displayname": displayname,
+                "is_collection": is_collection,
+                "content_type": content_type,
+                "size": size,
+                "last_modified": last_modified,
+            }
+        )
     return results
 
 
@@ -90,7 +93,7 @@ def register(server: FastMCP, dav_client: DAVClient) -> None:
         if depth not in ("0", "1"):
             return json.dumps({"error": f"Invalid depth {depth!r}: must be '0' or '1'"})
         try:
-            url = WEBDAV_BASE.rstrip("/") + "/" + path.lstrip("/")
+            url = WEBDAV_BASE.rstrip("/") + posixpath.normpath("/" + path.lstrip("/"))
             resp = dav_client.propfind(url, depth=depth, body=_PROPFIND_FILES)
             items = _parse_propfind(resp.text)
             return json.dumps(items, indent=2)
@@ -105,17 +108,21 @@ def register(server: FastMCP, dav_client: DAVClient) -> None:
             path: Path to the file (e.g. "/Documents/report.pdf").
         """
         try:
-            url = WEBDAV_BASE.rstrip("/") + "/" + path.lstrip("/")
+            url = WEBDAV_BASE.rstrip("/") + posixpath.normpath("/" + path.lstrip("/"))
             resp = dav_client.get(url)
             size = int(resp.headers.get("Content-Length", 0))
             if size > _MAX_DOWNLOAD_BYTES:
-                return json.dumps({"error": f"File too large ({size} bytes); limit is 50 MB"})
+                return json.dumps(
+                    {"error": f"File too large ({size} bytes); limit is 50 MB"}
+                )
             filename = path.rsplit("/", 1)[-1]
             content_type = resp.headers.get("Content-Type", "application/octet-stream")
-            return json.dumps({
-                "filename": filename,
-                "content_type": content_type,
-                "content": base64.b64encode(resp.content).decode(),
-            })
+            return json.dumps(
+                {
+                    "filename": filename,
+                    "content_type": content_type,
+                    "content": base64.b64encode(resp.content).decode(),
+                }
+            )
         except (FastmailError, requests.RequestException, ValueError) as exc:
             return json.dumps({"error": str(exc)})

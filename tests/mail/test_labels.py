@@ -1,10 +1,9 @@
 """Tests for tools/mail/labels.py — mail_manage_email_labels."""
 
 import json
-
-import requests
 from unittest.mock import MagicMock
 
+import requests
 from mcp.server.fastmcp import FastMCP
 
 from pyfastmail_mcp.tools.mail.labels import register

@@ -1,4 +1,4 @@
-"""Tests for DAVClient.put_bytes, mkcol, move, and credential validation."""
+"""Tests for DAVClient.put_bytes, mkcol, move, credential validation, and discovery."""
 
 from unittest.mock import MagicMock, patch
 
@@ -13,9 +13,10 @@ def _client():
     return DAVClient(email="user@example.com", app_password="secret")
 
 
-def _mock_response(status_code=200):
+def _mock_response(status_code=200, text=""):
     resp = MagicMock(spec=requests.Response)
     resp.status_code = status_code
+    resp.text = text
     resp.raise_for_status = MagicMock()
     return resp
 
@@ -24,7 +25,9 @@ def test_put_bytes_sends_correct_request():
     client = _client()
     resp = _mock_response()
     with patch.object(client._http, "put", return_value=resp) as mock_put:
-        result = client.put_bytes("https://myfiles.fastmail.com/f.bin", b"data", "application/octet-stream")
+        result = client.put_bytes(
+            "https://myfiles.fastmail.com/f.bin", b"data", "application/octet-stream"
+        )
     mock_put.assert_called_once_with(
         "https://myfiles.fastmail.com/f.bin",
         data=b"data",
@@ -107,15 +110,131 @@ def test_move_raises_on_http_error():
 
 
 def test_empty_email_raises():
-    with pytest.raises(AuthenticationError, match="FASTMAIL_EMAIL"):
-        DAVClient(email="", app_password="secret")
+    with patch.dict("os.environ", {"FASTMAIL_EMAIL": "", "FASTMAIL_APP_PASSWORD": ""}):
+        with pytest.raises(AuthenticationError, match="FASTMAIL_EMAIL"):
+            DAVClient(email="", app_password="secret")
 
 
 def test_empty_password_raises():
-    with pytest.raises(AuthenticationError, match="FASTMAIL_APP_PASSWORD"):
-        DAVClient(email="user@example.com", app_password="")
+    with patch.dict("os.environ", {"FASTMAIL_EMAIL": "", "FASTMAIL_APP_PASSWORD": ""}):
+        with pytest.raises(AuthenticationError, match="FASTMAIL_APP_PASSWORD"):
+            DAVClient(email="user@example.com", app_password="")
 
 
 def test_valid_credentials_ok():
     client = DAVClient(email="user@example.com", app_password="secret")
     assert client.email == "user@example.com"
+
+
+# --- discover_carddav_home ---
+
+_CARDDAV_HOME_XML = """<?xml version="1.0"?>
+<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:carddav">
+  <D:response>
+    <D:href>/dav/principals/user/user@example.com/</D:href>
+    <D:propstat>
+      <D:prop>
+        <C:addressbook-home-set>
+          <D:href>/dav/addressbooks/user/user@example.com/</D:href>
+        </C:addressbook-home-set>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>"""
+
+_CARDDAV_HOME_XML_ABSOLUTE = """<?xml version="1.0"?>
+<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:carddav">
+  <D:response>
+    <D:href>/dav/principals/user/user@example.com/</D:href>
+    <D:propstat>
+      <D:prop>
+        <C:addressbook-home-set>
+          <D:href>https://carddav.fastmail.com/dav/addressbooks/user/user@example.com/</D:href>
+        </C:addressbook-home-set>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>"""
+
+
+def test_discover_carddav_home_relative_href():
+    client = _client()
+    resp = _mock_response(text=_CARDDAV_HOME_XML)
+    with patch.object(client, "propfind", return_value=resp):
+        url = client.discover_carddav_home()
+    assert url == "https://carddav.fastmail.com/dav/addressbooks/user/user@example.com/"
+
+
+def test_discover_carddav_home_absolute_href():
+    client = _client()
+    resp = _mock_response(text=_CARDDAV_HOME_XML_ABSOLUTE)
+    with patch.object(client, "propfind", return_value=resp):
+        url = client.discover_carddav_home()
+    assert url == "https://carddav.fastmail.com/dav/addressbooks/user/user@example.com/"
+
+
+def test_discover_carddav_home_missing_raises():
+    client = _client()
+    resp = _mock_response(text='<?xml version="1.0"?><D:multistatus xmlns:D="DAV:"/>')
+    with patch.object(client, "propfind", return_value=resp):
+        with pytest.raises(ValueError, match="addressbook-home-set"):
+            client.discover_carddav_home()
+
+
+# --- discover_caldav_home ---
+
+_CALDAV_HOME_XML = """<?xml version="1.0"?>
+<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <D:response>
+    <D:href>/dav/principals/user/user@example.com/</D:href>
+    <D:propstat>
+      <D:prop>
+        <C:calendar-home-set>
+          <D:href>/dav/calendars/user/user@example.com/</D:href>
+        </C:calendar-home-set>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>"""
+
+_CALDAV_HOME_XML_ABSOLUTE = """<?xml version="1.0"?>
+<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <D:response>
+    <D:href>/dav/principals/user/user@example.com/</D:href>
+    <D:propstat>
+      <D:prop>
+        <C:calendar-home-set>
+          <D:href>https://caldav.fastmail.com/dav/calendars/user/user@example.com/</D:href>
+        </C:calendar-home-set>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>"""
+
+
+def test_discover_caldav_home_relative_href():
+    client = _client()
+    resp = _mock_response(text=_CALDAV_HOME_XML)
+    with patch.object(client, "propfind", return_value=resp):
+        url = client.discover_caldav_home()
+    assert url == "https://caldav.fastmail.com/dav/calendars/user/user@example.com/"
+
+
+def test_discover_caldav_home_absolute_href():
+    client = _client()
+    resp = _mock_response(text=_CALDAV_HOME_XML_ABSOLUTE)
+    with patch.object(client, "propfind", return_value=resp):
+        url = client.discover_caldav_home()
+    assert url == "https://caldav.fastmail.com/dav/calendars/user/user@example.com/"
+
+
+def test_discover_caldav_home_missing_raises():
+    client = _client()
+    resp = _mock_response(text='<?xml version="1.0"?><D:multistatus xmlns:D="DAV:"/>')
+    with patch.object(client, "propfind", return_value=resp):
+        with pytest.raises(ValueError, match="calendar-home-set"):
+            client.discover_caldav_home()

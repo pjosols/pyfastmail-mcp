@@ -3,6 +3,7 @@
 import json
 import uuid
 from datetime import date, datetime
+from urllib.parse import quote
 
 import icalendar
 import requests
@@ -46,8 +47,12 @@ def _build_vevent(
 
 
 def _event_url(calendar_href: str, uid: str) -> str:
-    base = f"{CALDAV_BASE}{calendar_href}" if not calendar_href.startswith("http") else calendar_href
-    return base.rstrip("/") + f"/{uid}.ics"
+    base = (
+        f"{CALDAV_BASE}{calendar_href}"
+        if not calendar_href.startswith("http")
+        else calendar_href
+    )
+    return base.rstrip("/") + f"/{quote(uid, safe='')}.ics"
 
 
 def register(server: FastMCP, dav_client: DAVClient) -> None:
@@ -121,7 +126,9 @@ def register(server: FastMCP, dav_client: DAVClient) -> None:
                 if title is not None:
                     event["SUMMARY"] = icalendar.vText(title)
                 if start is not None:
-                    event["DTSTART"] = icalendar.vDatetime(datetime.fromisoformat(start))
+                    event["DTSTART"] = icalendar.vDatetime(
+                        datetime.fromisoformat(start)
+                    )
                 if end is not None:
                     event["DTEND"] = icalendar.vDatetime(datetime.fromisoformat(end))
                 if location is not None:

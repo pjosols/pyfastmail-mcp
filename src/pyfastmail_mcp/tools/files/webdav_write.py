@@ -2,6 +2,7 @@
 
 import base64
 import json
+import posixpath
 
 import requests
 from mcp.server.fastmcp import FastMCP
@@ -9,9 +10,11 @@ from mcp.server.fastmcp import FastMCP
 from pyfastmail_mcp.dav_client import WEBDAV_BASE, DAVClient
 from pyfastmail_mcp.exceptions import FastmailError
 
+_MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
+
 
 def _url(path: str) -> str:
-    return WEBDAV_BASE.rstrip("/") + "/" + path.lstrip("/")
+    return WEBDAV_BASE.rstrip("/") + posixpath.normpath("/" + path.lstrip("/"))
 
 
 def register(server: FastMCP, dav_client: DAVClient) -> None:
@@ -29,6 +32,8 @@ def register(server: FastMCP, dav_client: DAVClient) -> None:
             content_type: MIME type of the file (default: application/octet-stream).
         """
         try:
+            if len(content) > _MAX_UPLOAD_BYTES * 4 // 3:
+                return json.dumps({"error": "Content too large; limit is 50 MB"})
             raw = base64.b64decode(content)
             url = _url(path)
             dav_client.put_bytes(url, raw, content_type)
@@ -74,6 +79,8 @@ def register(server: FastMCP, dav_client: DAVClient) -> None:
             src_url = _url(source)
             dst_url = _url(destination)
             dav_client.move(src_url, dst_url)
-            return json.dumps({"source": source, "destination": destination, "moved": True})
+            return json.dumps(
+                {"source": source, "destination": destination, "moved": True}
+            )
         except (FastmailError, requests.RequestException, ValueError) as exc:
             return json.dumps({"error": str(exc)})

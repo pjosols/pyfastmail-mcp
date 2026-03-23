@@ -65,9 +65,7 @@ async def test_value_error_returns_json_payload():
 
     client = _dav_client()
     # depth validation raises ValueError internally
-    result = json.loads(
-        await _tool(register, client, "files_list")(depth="infinity")
-    )
+    result = json.loads(await _tool(register, client, "files_list")(depth="infinity"))
     assert "error" in result
 
 

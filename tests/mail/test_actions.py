@@ -1,10 +1,9 @@
 """Tests for tools/mail/actions.py."""
 
 import json
-
-import requests
 from unittest.mock import MagicMock
 
+import requests
 from mcp.server.fastmcp import FastMCP
 
 from pyfastmail_mcp.tools.mail.actions import register
@@ -109,7 +108,9 @@ async def test_move_email_mailbox_not_found():
     client.get_mailbox_by_name.side_effect = MailboxNotFoundError(
         "Mailbox not found: 'Nope'"
     )
-    result = await _tool(client, "mail_move_email")(email_ids=["e1"], mailbox_name="Nope")
+    result = await _tool(client, "mail_move_email")(
+        email_ids=["e1"], mailbox_name="Nope"
+    )
     data = json.loads(result)
     assert "error" in data
     assert "Nope" in data["error"]
@@ -118,7 +119,9 @@ async def test_move_email_mailbox_not_found():
 async def test_move_email_client_error():
     client = mock_client()
     client.get_mailbox_by_name.side_effect = requests.RequestException("network error")
-    result = await _tool(client, "mail_move_email")(email_ids=["e1"], mailbox_name="Inbox")
+    result = await _tool(client, "mail_move_email")(
+        email_ids=["e1"], mailbox_name="Inbox"
+    )
     data = json.loads(result)
     assert "error" in data
     assert "network error" in data["error"]
@@ -158,7 +161,9 @@ async def test_delete_email_soft_partial_failure():
 async def test_delete_email_permanent_ok():
     client = mock_client()
     client.set.return_value = {"destroyed": ["e1", "e2"]}
-    result = await _tool(client, "mail_delete_email")(email_ids=["e1", "e2"], permanent=True)
+    result = await _tool(client, "mail_delete_email")(
+        email_ids=["e1", "e2"], permanent=True
+    )
     data = json.loads(result)
     assert data["destroyed"] == ["e1", "e2"]
     assert "notDestroyed" not in data
@@ -171,7 +176,9 @@ async def test_delete_email_permanent_partial_failure():
         "destroyed": ["e1"],
         "notDestroyed": {"e2": {"type": "notFound"}},
     }
-    result = await _tool(client, "mail_delete_email")(email_ids=["e1", "e2"], permanent=True)
+    result = await _tool(client, "mail_delete_email")(
+        email_ids=["e1", "e2"], permanent=True
+    )
     data = json.loads(result)
     assert data["destroyed"] == ["e1"]
     assert "e2" in data["notDestroyed"]

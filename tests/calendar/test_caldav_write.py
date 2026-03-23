@@ -50,18 +50,23 @@ END:VCALENDAR"""
 
 # --- calendar_create_event ---
 
+
 async def test_create_event_calls_put_with_ical():
     client = _client()
     client.put.return_value = _mock_response()
     fn = _tool(client, "calendar_create_event")
 
-    with patch("pyfastmail_mcp.tools.calendar.caldav_write.uuid.uuid4", return_value="uid-1"):
-        result = json.loads(await fn(
-            calendar_href=_CAL_HREF,
-            title="Team Sync",
-            start="2026-04-01T14:00:00",
-            end="2026-04-01T15:00:00",
-        ))
+    with patch(
+        "pyfastmail_mcp.tools.calendar.caldav_write.uuid.uuid4", return_value="uid-1"
+    ):
+        result = json.loads(
+            await fn(
+                calendar_href=_CAL_HREF,
+                title="Team Sync",
+                start="2026-04-01T14:00:00",
+                end="2026-04-01T15:00:00",
+            )
+        )
 
     assert result["uid"] == "uid-1"
     assert "uid-1.ics" in result["href"]
@@ -77,14 +82,18 @@ async def test_create_event_all_day():
     client.put.return_value = _mock_response()
     fn = _tool(client, "calendar_create_event")
 
-    with patch("pyfastmail_mcp.tools.calendar.caldav_write.uuid.uuid4", return_value="uid-2"):
-        result = json.loads(await fn(
-            calendar_href=_CAL_HREF,
-            title="Holiday",
-            start="2026-04-01",
-            end="2026-04-02",
-            all_day=True,
-        ))
+    with patch(
+        "pyfastmail_mcp.tools.calendar.caldav_write.uuid.uuid4", return_value="uid-2"
+    ):
+        result = json.loads(
+            await fn(
+                calendar_href=_CAL_HREF,
+                title="Holiday",
+                start="2026-04-01",
+                end="2026-04-02",
+                all_day=True,
+            )
+        )
 
     assert result["uid"] == "uid-2"
     _, content, _ = client.put.call_args[0]
@@ -97,8 +106,15 @@ async def test_create_event_prepends_caldav_base_for_relative_href():
     client.put.return_value = _mock_response()
     fn = _tool(client, "calendar_create_event")
 
-    with patch("pyfastmail_mcp.tools.calendar.caldav_write.uuid.uuid4", return_value="uid-3"):
-        await fn(calendar_href=_CAL_HREF, title="X", start="2026-04-01T10:00:00", end="2026-04-01T11:00:00")
+    with patch(
+        "pyfastmail_mcp.tools.calendar.caldav_write.uuid.uuid4", return_value="uid-3"
+    ):
+        await fn(
+            calendar_href=_CAL_HREF,
+            title="X",
+            start="2026-04-01T10:00:00",
+            end="2026-04-01T11:00:00",
+        )
 
     url = client.put.call_args[0][0]
     assert url.startswith(CALDAV_BASE)
@@ -109,15 +125,21 @@ async def test_create_event_returns_error_on_exception():
     client.put.side_effect = requests.RequestException("server error")
     fn = _tool(client, "calendar_create_event")
 
-    result = json.loads(await fn(
-        calendar_href=_CAL_HREF, title="X", start="2026-04-01T10:00:00", end="2026-04-01T11:00:00"
-    ))
+    result = json.loads(
+        await fn(
+            calendar_href=_CAL_HREF,
+            title="X",
+            start="2026-04-01T10:00:00",
+            end="2026-04-01T11:00:00",
+        )
+    )
 
     assert "error" in result
     assert "server error" in result["error"]
 
 
 # --- calendar_update_event ---
+
 
 async def test_update_event_patches_title():
     client = _client()
@@ -168,6 +190,7 @@ async def test_update_event_returns_error_on_exception():
 
 
 # --- calendar_delete_event ---
+
 
 async def test_delete_event_calls_delete():
     client = _client()

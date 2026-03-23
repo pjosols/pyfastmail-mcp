@@ -13,8 +13,8 @@ from pyfastmail_mcp.tools.contacts.carddav import register
 def _client():
     c = MagicMock()
     c.email = "user@example.com"
-    c.carddav_principal_url.return_value = (
-        "https://carddav.fastmail.com/dav/principals/user/user@example.com/"
+    c.discover_carddav_home.return_value = (
+        "https://carddav.fastmail.com/dav/addressbooks/user/user@example.com/"
     )
     return c
 
@@ -92,6 +92,7 @@ async def test_list_address_books_ok():
     client = _client()
     client.propfind.return_value = _mock_response(_XML_TWO_BOOKS)
     result = json.loads(await _tool(client, "contacts_list_address_books")())
+    client.discover_carddav_home.assert_called_once()
     assert len(result) == 2
     assert result[0]["displayname"] == "Personal"
     assert result[0]["description"] == "My contacts"
@@ -110,7 +111,9 @@ async def test_list_address_books_empty():
 @pytest.mark.asyncio
 async def test_list_address_books_error():
     client = _client()
-    client.propfind.side_effect = requests.RequestException("connection refused")
+    client.discover_carddav_home.side_effect = requests.RequestException(
+        "connection refused"
+    )
     result = json.loads(await _tool(client, "contacts_list_address_books")())
     assert "error" in result
     assert "connection refused" in result["error"]
@@ -183,6 +186,7 @@ async def test_list_contacts_auto_discover():
     client.propfind.return_value = _mock_response(_XML_TWO_BOOKS)
     client.report.return_value = _mock_response(_XML_CONTACTS)
     result = json.loads(await _tool(client, "contacts_list")())
+    client.discover_carddav_home.assert_called_once()
     assert len(result) == 2
     called_url = client.report.call_args[0][0]
     assert "Default" in called_url
@@ -193,6 +197,7 @@ async def test_list_contacts_auto_discover_no_books():
     client = _client()
     client.propfind.return_value = _mock_response(_XML_EMPTY)
     result = json.loads(await _tool(client, "contacts_list")())
+    client.discover_carddav_home.assert_called_once()
     assert result == []
 
 

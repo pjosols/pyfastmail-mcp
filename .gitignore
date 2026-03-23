@@ -15,8 +15,14 @@ wheels/
 .coverage
 htmlcov/
 
+# Caches
+.ruff_cache/
+.pytest_cache/
+.claude/
+
 # Dev artifacts (not shipped)
 .kiro/
+docs/
 AGENT_TODO.md
 SMOKE_TEST.md
 SECURITY_REVIEW.md

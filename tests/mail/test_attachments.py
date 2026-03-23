@@ -15,8 +15,8 @@ def _client():
     client = MagicMock()
     client.account_id = "acc99"
     client._get_session.return_value = {
-        "downloadUrl": "https://api.fm.com/jmap/download/{accountId}/{blobId}/{name}?accept={type}",
-        "uploadUrl": "https://api.fm.com/jmap/upload/{accountId}/",
+        "downloadUrl": "https://api.fastmail.com/jmap/download/{accountId}/{blobId}/{name}?accept={type}",
+        "uploadUrl": "https://api.fastmail.com/jmap/upload/{accountId}/",
     }
     return client
 
@@ -64,7 +64,9 @@ async def test_download_attachment_default_content_type():
     client = _client()
     client._http.get.return_value = _mock_response(content=b"data")
     result = json.loads(
-        await _tool(client, "mail_download_attachment")(blob_id="blob2", name="file.bin")
+        await _tool(client, "mail_download_attachment")(
+            blob_id="blob2", name="file.bin"
+        )
     )
     assert result["type"] == "application/octet-stream"
 

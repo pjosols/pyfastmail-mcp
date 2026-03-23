@@ -1,10 +1,9 @@
 """Tests for masked_email tools in tools/mail/masked_email.py."""
 
 import json
-
-import requests
 from unittest.mock import MagicMock
 
+import requests
 from mcp.server.fastmcp import FastMCP
 
 from pyfastmail_mcp.tools.mail.masked_email import register
@@ -50,7 +49,9 @@ async def test_list_filter_domain():
     client.call.return_value = [
         ["MaskedEmail/get", {"list": [MASKED_ITEM, other]}, "g"]
     ]
-    result = json.loads(await _tool(client, "mail_list_masked_emails")(domain="example"))
+    result = json.loads(
+        await _tool(client, "mail_list_masked_emails")(domain="example")
+    )
     assert len(result) == 1
     assert result[0]["id"] == "m1"
 
@@ -61,7 +62,9 @@ async def test_list_filter_state():
     client.call.return_value = [
         ["MaskedEmail/get", {"list": [MASKED_ITEM, disabled]}, "g"]
     ]
-    result = json.loads(await _tool(client, "mail_list_masked_emails")(state="disabled"))
+    result = json.loads(
+        await _tool(client, "mail_list_masked_emails")(state="disabled")
+    )
     assert len(result) == 1
     assert result[0]["id"] == "m2"
 
@@ -110,7 +113,9 @@ async def test_create_with_prefix():
 async def test_create_not_created():
     client = _client()
     client.set.return_value = {"notCreated": {"new": {"description": "invalid prefix"}}}
-    result = json.loads(await _tool(client, "mail_create_masked_email")(for_domain="x.com"))
+    result = json.loads(
+        await _tool(client, "mail_create_masked_email")(for_domain="x.com")
+    )
     assert result["error"] == "invalid prefix"
 
 
