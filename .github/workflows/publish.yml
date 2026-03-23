@@ -1,16 +1,31 @@
-name: Publish to PyPI
+name: Release and Publish
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --group dev
+      - run: uv run pytest -q
+
   publish:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
       - run: uv build
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist/*
       - uses: pypa/gh-action-pypi-publish@release/v1
