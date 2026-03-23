@@ -2,6 +2,8 @@
 
 An [MCP](https://modelcontextprotocol.io/) server that gives AI assistants full access to your Fastmail account — email, contacts, calendars, and file storage.
 
+> ⚠️ **This server can send email, delete messages, and modify contacts/calendars on your behalf.** AI assistants may act on content from untrusted sources (emails, web pages, files) which could contain prompt injection attacks. Review tool calls before approving them, especially actions that send email or delete data.
+
 ## Features
 
 **42 tools** across 4 protocols:
