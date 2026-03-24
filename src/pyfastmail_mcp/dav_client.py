@@ -46,8 +46,14 @@ class DAVClient:
         email: str | None = None,
         app_password: str | None = None,
     ):
-        self.email = email or os.environ.get("FASTMAIL_EMAIL", "")
-        password = app_password or os.environ.get("FASTMAIL_APP_PASSWORD", "")
+        self.email = (
+            email if email is not None else os.environ.get("FASTMAIL_EMAIL", "")
+        )
+        password = (
+            app_password
+            if app_password is not None
+            else os.environ.get("FASTMAIL_APP_PASSWORD", "")
+        )
         if not self.email or not password:
             self.available = False
             self._http = None

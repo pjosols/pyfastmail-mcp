@@ -134,6 +134,15 @@ async def test_search_emails_with_filters(mock_client):
     assert call_kwargs["sort"] == [{"property": "receivedAt", "isAscending": True}]
 
 
+async def test_search_emails_in_mailbox(mock_client):
+    mock_client.query_and_get.return_value = SUMMARY
+    await _tool(mock_client, "mail_search_emails")(
+        text="hello", in_mailbox="mbox-inbox-id"
+    )
+    call_args, _ = mock_client.query_and_get.call_args
+    assert call_args[1] == {"text": "hello", "inMailbox": "mbox-inbox-id"}
+
+
 async def test_search_emails_error(mock_client):
     mock_client.query_and_get.side_effect = requests.RequestException("boom")
     result = json.loads(await _tool(mock_client, "mail_search_emails")())

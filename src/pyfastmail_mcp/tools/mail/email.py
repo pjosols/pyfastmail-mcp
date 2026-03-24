@@ -37,6 +37,7 @@ def register(server: FastMCP, client: JMAPClient) -> None:
         to: str | None = None,
         subject: str | None = None,
         has_attachment: bool | None = None,
+        in_mailbox: str | None = None,
         limit: int = 20,
         newest_first: bool = True,
     ) -> str:
@@ -48,6 +49,7 @@ def register(server: FastMCP, client: JMAPClient) -> None:
             to: Filter by recipient address.
             subject: Filter by subject text.
             has_attachment: Filter by attachment presence.
+            in_mailbox: Mailbox ID to restrict search to. Use mail_list_mailboxes to get the ID.
             limit: Max results (default 20).
             newest_first: Sort newest first (default True).
         """
@@ -63,6 +65,8 @@ def register(server: FastMCP, client: JMAPClient) -> None:
                 filter_["subject"] = subject
             if has_attachment is not None:
                 filter_["hasAttachment"] = has_attachment
+            if in_mailbox:
+                filter_["inMailbox"] = in_mailbox
 
             sort = [{"property": "receivedAt", "isAscending": not newest_first}]
             emails = client.query_and_get(
