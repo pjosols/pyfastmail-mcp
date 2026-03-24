@@ -100,15 +100,32 @@ def register(server: FastMCP, client: JMAPClient) -> None:
             return json.dumps({"error": str(exc)})
 
     @server.tool()
-    async def mail_get_email(email_id: str, prefer_html: bool = False) -> str:
+    async def mail_get_email(
+        email_id: str,
+        prefer_html: bool = False,
+        headers: list[str] | None = None,
+    ) -> str:
         """Get a single email by ID with full body content and attachment metadata.
+
+        Optionally fetch specific headers by name. JMAP requires headers to be
+        requested by name — no wildcard fetch is supported. Use mail_export_email
+        to retrieve all raw headers.
+
+        Common useful headers:
+          - X-Delivered-To: original envelope recipient
+          - X-SimpleLogin-Envelope-To: SimpleLogin alias that received the email
+          - X-SimpleLogin-Original-From: real sender behind a SimpleLogin reverse alias
 
         Args:
             email_id: The JMAP email ID.
             prefer_html: Return HTML body if available; defaults to plain text.
+            headers: Optional list of header names to fetch (e.g. ["X-Delivered-To"]).
         """
         try:
             account_id = client.account_id
+            props = list(_EMAIL_PROPS)
+            if headers:
+                props += [f"header:{h}" for h in headers]
             responses = client.call(
                 ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
                 [
@@ -117,7 +134,7 @@ def register(server: FastMCP, client: JMAPClient) -> None:
                         {
                             "accountId": account_id,
                             "ids": [email_id],
-                            "properties": _EMAIL_PROPS,
+                            "properties": props,
                             "fetchAllBodyValues": True,
                         },
                         "g",
@@ -135,20 +152,20 @@ def register(server: FastMCP, client: JMAPClient) -> None:
                 {"name": a.get("name"), "type": a.get("type"), "size": a.get("size")}
                 for a in (email.get("attachments") or [])
             ]
-            return json.dumps(
-                {
-                    "id": email.get("id"),
-                    "subject": email.get("subject"),
-                    "from": email.get("from"),
-                    "to": email.get("to"),
-                    "cc": email.get("cc"),
-                    "receivedAt": email.get("receivedAt"),
-                    "body": body,
-                    "hasAttachment": email.get("hasAttachment"),
-                    "attachments": attachments,
-                },
-                indent=2,
-            )
+            result: dict = {
+                "id": email.get("id"),
+                "subject": email.get("subject"),
+                "from": email.get("from"),
+                "to": email.get("to"),
+                "cc": email.get("cc"),
+                "receivedAt": email.get("receivedAt"),
+                "body": body,
+                "hasAttachment": email.get("hasAttachment"),
+                "attachments": attachments,
+            }
+            if headers:
+                result["headers"] = {h: email.get(f"header:{h}") for h in headers}
+            return json.dumps(result, indent=2)
         except (FastmailError, requests.RequestException, ValueError) as exc:
             return json.dumps({"error": str(exc)})
 

@@ -195,3 +195,23 @@ async def test_reply_client_error():
     data = json.loads(result)
     assert "error" in data
     assert "network failure" in data["error"]
+
+
+async def test_reply_submission_error_surfaced():
+    client = mock_client()
+    client.call.side_effect = [
+        _email_get_response(),
+        _identity_response(),
+        [
+            ("Email/set", {"created": {"draft": {"id": "e1"}}}, "e"),
+            (
+                "EmailSubmission/set",
+                {"notCreated": {"sub": {"type": "forbiddenFrom"}}},
+                "s",
+            ),
+        ],
+    ]
+    result = json.loads(
+        await _tool(client, "mail_reply_to_email")(email_id="orig1", text_body="reply")
+    )
+    assert "Not permitted to send from this address" in result["error"]

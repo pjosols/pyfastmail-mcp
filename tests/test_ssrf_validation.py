@@ -95,71 +95,6 @@ BAD_HREF = "https://evil.example.com/steal"
 
 
 # ---------------------------------------------------------------------------
-# contacts_get_contact — carddav.py
-# ---------------------------------------------------------------------------
-
-
-async def test_contacts_get_contact_rejects_bad_href():
-    from pyfastmail_mcp.tools.contacts.carddav import register
-
-    fn = _tool(_mock_client(), register, "contacts_get_contact")
-    result = json.loads(await fn(href=BAD_HREF))
-    assert "error" in result
-
-
-# ---------------------------------------------------------------------------
-# contacts_list — carddav.py
-# ---------------------------------------------------------------------------
-
-
-async def test_contacts_list_rejects_bad_href():
-    from pyfastmail_mcp.tools.contacts.carddav import register
-
-    fn = _tool(_mock_client(), register, "contacts_list")
-    result = json.loads(await fn(address_book_href=BAD_HREF))
-    assert "error" in result
-
-
-# ---------------------------------------------------------------------------
-# contacts_create_contact — carddav_write.py
-# ---------------------------------------------------------------------------
-
-
-async def test_contacts_create_rejects_bad_href():
-    from pyfastmail_mcp.tools.contacts.carddav_write import register
-
-    fn = _tool(_mock_client(), register, "contacts_create_contact")
-    result = json.loads(await fn(name="Test", address_book_href=BAD_HREF))
-    assert "error" in result
-
-
-# ---------------------------------------------------------------------------
-# contacts_update_contact — carddav_write.py
-# ---------------------------------------------------------------------------
-
-
-async def test_contacts_update_rejects_bad_href():
-    from pyfastmail_mcp.tools.contacts.carddav_write import register
-
-    fn = _tool(_mock_client(), register, "contacts_update_contact")
-    result = json.loads(await fn(href=BAD_HREF, name="New Name"))
-    assert "error" in result
-
-
-# ---------------------------------------------------------------------------
-# contacts_delete_contact — carddav_write.py
-# ---------------------------------------------------------------------------
-
-
-async def test_contacts_delete_rejects_bad_href():
-    from pyfastmail_mcp.tools.contacts.carddav_write import register
-
-    fn = _tool(_mock_client(), register, "contacts_delete_contact")
-    result = json.loads(await fn(href=BAD_HREF))
-    assert "error" in result
-
-
-# ---------------------------------------------------------------------------
 # calendar_list_events — caldav.py
 # ---------------------------------------------------------------------------
 
@@ -229,3 +164,82 @@ async def test_calendar_delete_event_rejects_bad_href():
     fn = _tool(_mock_client(), register, "calendar_delete_event")
     result = json.loads(await fn(href=BAD_HREF))
     assert "error" in result
+
+
+# ---------------------------------------------------------------------------
+# WebDAV tool SSRF validation — webdav.py / webdav_write.py
+# ---------------------------------------------------------------------------
+
+
+def _webdav_client():
+    c = MagicMock(spec=DAVClient)
+    real = _real_client()
+    c.validate_dav_url.side_effect = real.validate_dav_url
+    return c
+
+
+async def test_files_list_calls_validate():
+    import requests as _requests
+
+    from pyfastmail_mcp.tools.files.webdav import register
+
+    client = _webdav_client()
+    resp = MagicMock(spec=_requests.Response)
+    resp.text = "<D:multistatus xmlns:D='DAV:'></D:multistatus>"
+    client.propfind.return_value = resp
+    fn = _tool(client, register, "files_list")
+    await fn(path="/docs")
+    client.validate_dav_url.assert_called_once()
+
+
+async def test_files_get_calls_validate():
+    import requests as _requests
+
+    from pyfastmail_mcp.tools.files.webdav import register
+
+    client = _webdav_client()
+    resp = MagicMock(spec=_requests.Response)
+    resp.content = b"hello"
+    resp.headers = {"Content-Type": "text/plain"}
+    client.get.return_value = resp
+    fn = _tool(client, register, "files_get")
+    await fn(path="/notes.txt")
+    client.validate_dav_url.assert_called_once()
+
+
+async def test_files_upload_calls_validate():
+    import base64
+
+    from pyfastmail_mcp.tools.files.webdav_write import register
+
+    client = _webdav_client()
+    fn = _tool(client, register, "files_upload")
+    await fn(path="/f.txt", content=base64.b64encode(b"hi").decode())
+    client.validate_dav_url.assert_called_once()
+
+
+async def test_files_create_folder_calls_validate():
+    from pyfastmail_mcp.tools.files.webdav_write import register
+
+    client = _webdav_client()
+    fn = _tool(client, register, "files_create_folder")
+    await fn(path="/NewFolder")
+    client.validate_dav_url.assert_called_once()
+
+
+async def test_files_delete_calls_validate():
+    from pyfastmail_mcp.tools.files.webdav_write import register
+
+    client = _webdav_client()
+    fn = _tool(client, register, "files_delete")
+    await fn(path="/old.txt")
+    client.validate_dav_url.assert_called_once()
+
+
+async def test_files_move_calls_validate_both_paths():
+    from pyfastmail_mcp.tools.files.webdav_write import register
+
+    client = _webdav_client()
+    fn = _tool(client, register, "files_move")
+    await fn(source="/a.txt", destination="/b.txt")
+    assert client.validate_dav_url.call_count == 2

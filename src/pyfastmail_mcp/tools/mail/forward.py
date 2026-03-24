@@ -7,6 +7,7 @@ from mcp.server.fastmcp import FastMCP
 
 from pyfastmail_mcp.client import USING_SUBMISSION, JMAPClient
 from pyfastmail_mcp.exceptions import FastmailError, IdentityNotFoundError
+from pyfastmail_mcp.tools.mail.actions import _humanize_submission_errors
 from pyfastmail_mcp.tools.mail.identities import _find_identity
 from pyfastmail_mcp.tools.mail.reply import _get_email, _quote_body
 
@@ -84,7 +85,7 @@ def register(server: FastMCP, client: JMAPClient) -> None:
 
             not_created = sub_data.get("notCreated") or {}
             if not_created:
-                return json.dumps({"error": not_created})
+                return json.dumps({"error": _humanize_submission_errors(not_created)})
 
             created_email = (email_data.get("created") or {}).get("draft", {})
             created_sub = (sub_data.get("created") or {}).get("sub", {})

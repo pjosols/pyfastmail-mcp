@@ -6,14 +6,12 @@ An [MCP](https://modelcontextprotocol.io/) server that gives AI assistants full 
 
 ## Features
 
-**42 tools** across 4 protocols:
-
 | Domain | Protocol | Tools |
 |--------|----------|-------|
-| Mail | JMAP | Send, reply, forward, search, read, archive, labels, masked email, attachments, threads |
-| Contacts | CardDAV | List address books, CRUD contacts |
-| Calendar | CalDAV | List calendars, CRUD events |
-| Files | WebDAV | List, upload, download, move, delete, create folders |
+| Mail | JMAP | Send, reply, forward, search, read, pin, archive, keywords, masked email, attachments, threads, import/export, identities |
+| Contacts | JMAP | List address books, CRUD contacts, query |
+| Calendar | CalDAV | List calendars, CRUD events (optional — requires app password) |
+| Files | WebDAV | List, upload, download, move, delete, create folders (optional — requires app password) |
 
 ## Installation
 
@@ -31,10 +29,12 @@ uvx pyfastmail-mcp
 
 ### 1. Get Fastmail Credentials
 
-You need two credentials from Fastmail:
+You need an API token from Fastmail. An app password is optional (only needed for calendar and file storage).
 
-- **API Token** (for JMAP/mail): [Fastmail Settings → Privacy & Security → API Tokens](https://app.fastmail.com/settings/security/tokens)
-- **App Password** (for CardDAV/CalDAV/WebDAV): [Fastmail Settings → Privacy & Security → App Passwords](https://app.fastmail.com/settings/security/passwords) — create one with DAV access
+- **API Token** (required — mail and contacts): [Fastmail Settings → Privacy & Security → API Tokens](https://app.fastmail.com/settings/security/tokens) — enable the `urn:ietf:params:jmap:contacts` capability
+- **App Password** (optional — calendars and files): [Fastmail Settings → Privacy & Security → App Passwords](https://app.fastmail.com/settings/security/passwords) — create one with the **"DAV (CardDAV, CalDAV, WebDAV)"** scope
+
+If you only set the API token, the server starts with mail and contacts tools. Calendar and file tools are registered only when the app password is also provided.
 
 ### 2. Set Environment Variables
 
@@ -89,26 +89,32 @@ For Kiro CLI, add to `.kiro/settings/mcp.json`:
 | Tool | Description |
 |------|-------------|
 | `health_check` | Verify connection and auth |
-| `mail_list_mailboxes` | List all mailboxes |
+| `mail_list_mailboxes` | List all mailboxes (folders/labels) |
 | `mail_create_mailbox` | Create a mailbox |
 | `mail_rename_mailbox` | Rename a mailbox |
 | `mail_delete_mailbox` | Delete a mailbox |
-| `mail_get_email` | Get a single email by ID |
+| `mail_get_email` | Get email by ID (with optional headers) |
 | `mail_get_recent_emails` | Get recent emails |
 | `mail_search_emails` | Search by query |
+| `mail_search_snippets` | Highlighted search result snippets |
 | `mail_get_email_thread` | Get full thread |
 | `mail_mark_email_read` | Mark read/unread |
+| `mail_pin_email` | Pin/unpin (flag/star) |
 | `mail_move_email` | Move to mailbox |
-| `mail_delete_email` | Move to trash |
+| `mail_delete_email` | Move to trash or permanently delete |
 | `mail_archive_email` | Archive |
-| `mail_manage_email_labels` | Add/remove labels |
+| `mail_manage_email_labels` | Add/remove keywords |
+| `mail_export_email` | Download raw .eml file |
+| `mail_import_email` | Import .eml into mail store |
+| `mail_parse_email` | Parse a blob as email without importing |
 | `mail_list_identities` | List send-as identities |
+| `mail_set_identity` | Create/update/delete identities |
 | `mail_send_email` | Send new email |
 | `mail_reply_to_email` | Reply to email |
 | `mail_forward_email` | Forward email |
 | `mail_list_masked_emails` | List masked emails |
 | `mail_create_masked_email` | Create masked email |
-| `mail_update_masked_email_state` | Enable/disable masked email |
+| `mail_update_masked_email` | Update masked email state, domain, description, or URL |
 | `mail_download_attachment` | Download attachment |
 | `mail_upload_attachment` | Upload blob for sending |
 
@@ -117,11 +123,12 @@ For Kiro CLI, add to `.kiro/settings/mcp.json`:
 | Tool | Description |
 |------|-------------|
 | `contacts_list_address_books` | List address books |
-| `contacts_list` | List contacts |
-| `contacts_get_contact` | Get contact details |
+| `contacts_list` | List contacts (query+get combo) |
+| `contacts_get_contact` | Get contact(s) by ID |
+| `contacts_query_contacts` | Query contacts with filters and sorting |
 | `contacts_create_contact` | Create contact |
-| `contacts_update_contact` | Update contact |
-| `contacts_delete_contact` | Delete contact |
+| `contacts_update_contact` | Update contact fields |
+| `contacts_delete_contact` | Delete contact(s) |
 
 ### Calendar (`calendar_*`)
 

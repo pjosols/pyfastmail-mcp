@@ -160,3 +160,41 @@ async def test_get_recent_emails_error(mock_client):
     mock_client.query_and_get.side_effect = requests.RequestException("timeout")
     result = json.loads(await _tool(mock_client, "mail_get_recent_emails")())
     assert "timeout" in result["error"]
+
+
+async def test_get_email_with_headers(mock_client):
+    email = {**EMAIL, "header:X-Delivered-To": "me@example.com", "header:X-Foo": None}
+    mock_client.call.return_value = [["Email/get", {"list": [email]}, "g"]]
+    result = json.loads(
+        await _tool(mock_client)(email_id="e1", headers=["X-Delivered-To", "X-Foo"])
+    )
+    assert result["headers"] == {"X-Delivered-To": "me@example.com", "X-Foo": None}
+    _, call_kwargs, _ = mock_client.call.call_args[0][1][0]
+    assert "header:X-Delivered-To" in call_kwargs["properties"]
+    assert "header:X-Foo" in call_kwargs["properties"]
+
+
+async def test_get_email_headers_not_in_result_when_not_requested(mock_client):
+    mock_client.call.return_value = [["Email/get", {"list": [EMAIL]}, "g"]]
+    result = json.loads(await _tool(mock_client)(email_id="e1"))
+    assert "headers" not in result
+
+
+async def test_get_email_headers_appended_to_default_props(mock_client):
+    mock_client.call.return_value = [["Email/get", {"list": [EMAIL]}, "g"]]
+    await _tool(mock_client)(email_id="e1", headers=["X-Delivered-To"])
+    _, call_kwargs, _ = mock_client.call.call_args[0][1][0]
+    # default props still present
+    assert "subject" in call_kwargs["properties"]
+    assert "header:X-Delivered-To" in call_kwargs["properties"]
+
+
+def test_get_email_docstring_mentions_export_for_all_headers():
+    from mcp.server.fastmcp import FastMCP
+
+    from pyfastmail_mcp.tools.mail.email import register
+
+    server = FastMCP("test")
+    register(server, MagicMock())
+    doc = server._tool_manager._tools["mail_get_email"].fn.__doc__
+    assert "mail_export_email" in doc

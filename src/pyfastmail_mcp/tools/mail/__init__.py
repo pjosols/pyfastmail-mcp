@@ -11,14 +11,18 @@ def register_all(server: FastMCP, client: JMAPClient) -> None:
         actions,
         attachments,
         email,
+        export,
         forward,
         health,
         identities,
+        import_,
         labels,
         mailbox,
         masked_email,
+        parse,
         reply,
         send,
+        snippets,
         thread,
     )
 
@@ -34,3 +38,7 @@ def register_all(server: FastMCP, client: JMAPClient) -> None:
     labels.register(server, client)
     masked_email.register(server, client)
     attachments.register(server, client)
+    snippets.register(server, client)
+    export.register(server, client)
+    import_.register(server, client)
+    parse.register(server, client)

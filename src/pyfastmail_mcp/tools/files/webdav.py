@@ -27,6 +27,11 @@ _PROPFIND_FILES = """<?xml version="1.0" encoding="UTF-8"?>
 </D:propfind>"""
 
 
+def _check_path(path: str) -> None:
+    if ".." in path.split("/"):
+        raise ValueError("Path must not contain '..' segments")
+
+
 def _tag(ns: str, local: str) -> str:
     return f"{{{ns}}}{local}"
 
@@ -93,7 +98,9 @@ def register(server: FastMCP, dav_client: DAVClient) -> None:
         if depth not in ("0", "1"):
             return json.dumps({"error": f"Invalid depth {depth!r}: must be '0' or '1'"})
         try:
+            _check_path(path)
             url = WEBDAV_BASE.rstrip("/") + posixpath.normpath("/" + path.lstrip("/"))
+            dav_client.validate_dav_url(url)
             resp = dav_client.propfind(url, depth=depth, body=_PROPFIND_FILES)
             items = _parse_propfind(resp.text)
             return json.dumps(items, indent=2)
@@ -108,7 +115,9 @@ def register(server: FastMCP, dav_client: DAVClient) -> None:
             path: Path to the file (e.g. "/Documents/report.pdf").
         """
         try:
+            _check_path(path)
             url = WEBDAV_BASE.rstrip("/") + posixpath.normpath("/" + path.lstrip("/"))
+            dav_client.validate_dav_url(url)
             resp = dav_client.get(url)
             size = int(resp.headers.get("Content-Length", 0))
             if size > _MAX_DOWNLOAD_BYTES:

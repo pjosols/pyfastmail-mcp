@@ -153,7 +153,7 @@ async def test_rename_mailbox_error(mock_client):
 
 async def test_delete_mailbox_ok(mock_client):
     mock_client.query_and_get.return_value = [{"id": "mb5", "role": None}]
-    mock_client.set.return_value = {"destroyed": ["mb5"]}
+    mock_client.call.return_value = [("Mailbox/set", {"destroyed": ["mb5"]}, "s")]
     result = await _get_tool(mock_client, "mail_delete_mailbox")(mailbox_id="mb5")
     data = json.loads(result)
     assert data["destroyed"] == "mb5"
@@ -165,21 +165,91 @@ async def test_delete_mailbox_system_role_blocked(mock_client):
     data = json.loads(result)
     assert "error" in data
     assert "inbox" in data["error"]
-    mock_client.set.assert_not_called()
+    mock_client.call.assert_not_called()
 
 
 async def test_delete_mailbox_not_destroyed(mock_client):
     mock_client.query_and_get.return_value = [{"id": "mb5", "role": None}]
-    mock_client.set.return_value = {
-        "notDestroyed": {"mb5": {"type": "notFound", "description": "Gone"}}
-    }
+    mock_client.call.return_value = [
+        (
+            "Mailbox/set",
+            {"notDestroyed": {"mb5": {"type": "notFound", "description": "Gone"}}},
+            "s",
+        )
+    ]
     result = await _get_tool(mock_client, "mail_delete_mailbox")(mailbox_id="mb5")
     data = json.loads(result)
     assert "error" in data
     assert "Gone" in data["error"]
 
 
+async def test_delete_mailbox_has_child(mock_client):
+    mock_client.query_and_get.return_value = [{"id": "mb5", "role": None}]
+    mock_client.call.return_value = [
+        (
+            "Mailbox/set",
+            {"notDestroyed": {"mb5": {"type": "mailboxHasChild"}}},
+            "s",
+        )
+    ]
+    result = await _get_tool(mock_client, "mail_delete_mailbox")(mailbox_id="mb5")
+    data = json.loads(result)
+    assert "error" in data
+    assert "child" in data["error"]
+
+
+async def test_delete_mailbox_has_email(mock_client):
+    mock_client.query_and_get.return_value = [{"id": "mb5", "role": None}]
+    mock_client.call.return_value = [
+        (
+            "Mailbox/set",
+            {"notDestroyed": {"mb5": {"type": "mailboxHasEmail"}}},
+            "s",
+        )
+    ]
+    result = await _get_tool(mock_client, "mail_delete_mailbox")(mailbox_id="mb5")
+    data = json.loads(result)
+    assert "error" in data
+    assert "on_destroy_remove_emails" in data["error"]
+
+
+async def test_delete_mailbox_on_destroy_remove_emails(mock_client):
+    mock_client.query_and_get.return_value = [{"id": "mb5", "role": None}]
+    mock_client.call.return_value = [("Mailbox/set", {"destroyed": ["mb5"]}, "s")]
+    result = await _get_tool(mock_client, "mail_delete_mailbox")(
+        mailbox_id="mb5", on_destroy_remove_emails=True
+    )
+    data = json.loads(result)
+    assert data["destroyed"] == "mb5"
+    call_args = mock_client.call.call_args
+    method_calls = call_args[0][1]
+    assert method_calls[0][1]["onDestroyRemoveEmails"] is True
+
+
 async def test_delete_mailbox_error(mock_client):
     mock_client.query_and_get.side_effect = requests.RequestException("network error")
     result = await _get_tool(mock_client, "mail_delete_mailbox")(mailbox_id="mb5")
     assert "error" in json.loads(result)
+
+
+# --- docstring content ---
+
+
+def test_list_mailboxes_docstring_mentions_labels(mock_client):
+    fn = _get_tool(mock_client)
+    doc = fn.__doc__
+    assert "label" in doc.lower()
+    assert "parentId" in doc or "parent" in doc.lower()
+
+
+def test_create_mailbox_docstring_mentions_labels(mock_client):
+    fn = _get_tool(mock_client, "mail_create_mailbox")
+    doc = fn.__doc__
+    assert "label" in doc.lower()
+    assert "parent" in doc.lower()
+
+
+def test_delete_mailbox_docstring_mentions_child(mock_client):
+    fn = _get_tool(mock_client, "mail_delete_mailbox")
+    doc = fn.__doc__
+    assert "child" in doc.lower() or "nested" in doc.lower()

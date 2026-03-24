@@ -178,3 +178,25 @@ async def test_forward_client_error():
     data = json.loads(result)
     assert "error" in data
     assert "network failure" in data["error"]
+
+
+async def test_forward_submission_error_surfaced():
+    client = mock_client()
+    client.call.side_effect = [
+        _email_get_response(),
+        _identity_response(),
+        [
+            ("Email/set", {"created": {"draft": {"id": "e1"}}}, "e"),
+            (
+                "EmailSubmission/set",
+                {"notCreated": {"sub": {"type": "forbiddenToSend"}}},
+                "s",
+            ),
+        ],
+    ]
+    result = json.loads(
+        await _tool(client, "mail_forward_email")(
+            email_id="orig1", to=["carol@example.com"]
+        )
+    )
+    assert "Sending is not permitted for this account" in result["error"]

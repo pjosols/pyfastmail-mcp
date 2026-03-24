@@ -126,14 +126,14 @@ async def test_create_error():
     assert "error" in result
 
 
-# --- mail_update_masked_email_state ---
+# --- mail_update_masked_email ---
 
 
 async def test_update_enable():
     client = _client()
     client.set.return_value = {"updated": {"m1": None}}
     result = json.loads(
-        await _tool(client, "mail_update_masked_email_state")(
+        await _tool(client, "mail_update_masked_email")(
             masked_email_id="m1", state="enabled"
         )
     )
@@ -144,7 +144,7 @@ async def test_update_disable():
     client = _client()
     client.set.return_value = {"updated": {"m1": None}}
     result = json.loads(
-        await _tool(client, "mail_update_masked_email_state")(
+        await _tool(client, "mail_update_masked_email")(
             masked_email_id="m1", state="disabled"
         )
     )
@@ -154,8 +154,8 @@ async def test_update_disable():
 async def test_update_invalid_state():
     client = _client()
     result = json.loads(
-        await _tool(client, "mail_update_masked_email_state")(
-            masked_email_id="m1", state="deleted"
+        await _tool(client, "mail_update_masked_email")(
+            masked_email_id="m1", state="invalid"
         )
     )
     assert "error" in result
@@ -166,7 +166,7 @@ async def test_update_not_updated():
     client = _client()
     client.set.return_value = {"notUpdated": {"m1": {"description": "not found"}}}
     result = json.loads(
-        await _tool(client, "mail_update_masked_email_state")(
+        await _tool(client, "mail_update_masked_email")(
             masked_email_id="m1", state="enabled"
         )
     )
@@ -177,8 +177,95 @@ async def test_update_error():
     client = _client()
     client.set.side_effect = requests.RequestException("timeout")
     result = json.loads(
-        await _tool(client, "mail_update_masked_email_state")(
+        await _tool(client, "mail_update_masked_email")(
             masked_email_id="m1", state="enabled"
         )
     )
     assert "error" in result
+
+
+# --- additional coverage for masked_email_fixes ---
+
+
+async def test_list_includes_url_and_created_by():
+    client = _client()
+    item = {**MASKED_ITEM, "url": "https://example.com/signup", "createdBy": "myapp"}
+    client.call.return_value = [["MaskedEmail/get", {"list": [item]}, "g"]]
+    result = json.loads(await _tool(client, "mail_list_masked_emails")())
+    assert result[0]["url"] == "https://example.com/signup"
+    assert result[0]["createdBy"] == "myapp"
+
+
+async def test_create_with_url():
+    client = _client()
+    client.set.return_value = {
+        "created": {
+            "new": {
+                "id": "m3",
+                "email": "x@masked.fm",
+                "state": "enabled",
+                "createdBy": "app",
+            }
+        }
+    }
+    result = json.loads(
+        await _tool(client, "mail_create_masked_email")(
+            for_domain="example.com", url="https://example.com/signup"
+        )
+    )
+    _, kwargs = client.set.call_args
+    assert kwargs["create"]["new"]["url"] == "https://example.com/signup"
+    assert result["url"] == "https://example.com/signup"
+    assert result["createdBy"] == "app"
+
+
+async def test_create_state_null_defaults_to_pending():
+    client = _client()
+    client.set.return_value = {
+        "created": {"new": {"id": "m4", "email": "x@masked.fm", "state": None}}
+    }
+    result = json.loads(await _tool(client, "mail_create_masked_email")())
+    assert result["state"] == "pending"
+
+
+async def test_create_rate_limit():
+    client = _client()
+    client.set.return_value = {"notCreated": {"new": {"type": "rateLimit"}}}
+    result = json.loads(await _tool(client, "mail_create_masked_email")())
+    assert "rate limit" in result["error"].lower()
+
+
+async def test_update_deleted_state():
+    client = _client()
+    client.set.return_value = {"updated": {"m1": None}}
+    result = json.loads(
+        await _tool(client, "mail_update_masked_email")(
+            masked_email_id="m1", state="deleted"
+        )
+    )
+    assert result["state"] == "deleted"
+
+
+async def test_update_multi_fields():
+    client = _client()
+    client.set.return_value = {"updated": {"m1": None}}
+    result = json.loads(
+        await _tool(client, "mail_update_masked_email")(
+            masked_email_id="m1",
+            for_domain="new.com",
+            description="updated",
+            url="https://new.com",
+        )
+    )
+    assert result["forDomain"] == "new.com"
+    assert result["description"] == "updated"
+    assert result["url"] == "https://new.com"
+
+
+async def test_update_no_fields():
+    client = _client()
+    result = json.loads(
+        await _tool(client, "mail_update_masked_email")(masked_email_id="m1")
+    )
+    assert "error" in result
+    client.set.assert_not_called()

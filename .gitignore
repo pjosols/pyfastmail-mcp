@@ -22,11 +22,4 @@ htmlcov/
 
 # Dev artifacts (not shipped)
 .kiro/
-docs/SECURITY_REVIEW.md
-AGENT_TODO.md
-SMOKE_TEST.md
-SECURITY_REVIEW.md
-dev_loop.py
-run_dev_loop.sh
-smoke_test_loop.py
-smoke_test.py
+.archive/

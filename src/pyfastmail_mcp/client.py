@@ -16,6 +16,7 @@ USING_MAIL = [
 ]
 USING_SUBMISSION = USING_MAIL + ["urn:ietf:params:jmap:submission"]
 USING_MASKED_EMAIL = USING_MAIL + ["https://www.fastmail.com/dev/maskedemail"]
+USING_CONTACTS = ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:contacts"]
 
 
 class JMAPClient:
@@ -27,6 +28,7 @@ class JMAPClient:
             raise AuthenticationError("FASTMAIL_API_TOKEN is not set")
         self._session_data: dict | None = None
         self._http = requests.Session()
+        self._http.max_redirects = 0
         self._http.headers.update({"Authorization": f"Bearer {self._token}"})
 
     @property

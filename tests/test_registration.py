@@ -18,6 +18,7 @@ def _jmap_client():
 def _dav_client():
     c = MagicMock()
     c.email = "user@example.com"
+    c.available = True
     return c
 
 
@@ -36,21 +37,28 @@ EXPECTED_MAIL_TOOLS = {
     "mail_delete_email",
     "mail_archive_email",
     "mail_list_identities",
+    "mail_set_identity",
     "mail_send_email",
     "mail_reply_to_email",
     "mail_forward_email",
     "mail_manage_email_labels",
     "mail_list_masked_emails",
     "mail_create_masked_email",
-    "mail_update_masked_email_state",
+    "mail_update_masked_email",
     "mail_download_attachment",
     "mail_upload_attachment",
+    "mail_pin_email",
+    "mail_search_snippets",
+    "mail_export_email",
+    "mail_import_email",
+    "mail_parse_email",
 }
 
-EXPECTED_CONTACTS_TOOLS = {
+EXPECTED_CONTACTS_TOOLS: set[str] = {
     "contacts_list_address_books",
-    "contacts_list",
     "contacts_get_contact",
+    "contacts_query_contacts",
+    "contacts_list",
     "contacts_create_contact",
     "contacts_update_contact",
     "contacts_delete_contact",
@@ -66,7 +74,7 @@ def test_mail_register_all_registers_expected_tools():
 
 def test_contacts_register_all_registers_expected_tools():
     server = FastMCP("test")
-    register_contacts(server, _dav_client())
+    register_contacts(server, _jmap_client())
     registered = set(server._tool_manager._tools.keys())
     assert EXPECTED_CONTACTS_TOOLS == registered
 

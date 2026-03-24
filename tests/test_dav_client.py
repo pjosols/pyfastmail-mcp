@@ -6,7 +6,6 @@ import pytest
 import requests
 
 from pyfastmail_mcp.dav_client import DAVClient
-from pyfastmail_mcp.exceptions import AuthenticationError
 
 
 def _client():
@@ -109,21 +108,22 @@ def test_move_raises_on_http_error():
 # --- credential validation ---
 
 
-def test_empty_email_raises():
+def test_empty_email_unavailable():
     with patch.dict("os.environ", {"FASTMAIL_EMAIL": "", "FASTMAIL_APP_PASSWORD": ""}):
-        with pytest.raises(AuthenticationError, match="FASTMAIL_EMAIL"):
-            DAVClient(email="", app_password="secret")
+        client = DAVClient(email="", app_password="secret")
+        assert client.available is False
 
 
-def test_empty_password_raises():
+def test_empty_password_unavailable():
     with patch.dict("os.environ", {"FASTMAIL_EMAIL": "", "FASTMAIL_APP_PASSWORD": ""}):
-        with pytest.raises(AuthenticationError, match="FASTMAIL_APP_PASSWORD"):
-            DAVClient(email="user@example.com", app_password="")
+        client = DAVClient(email="user@example.com", app_password="")
+        assert client.available is False
 
 
 def test_valid_credentials_ok():
     client = DAVClient(email="user@example.com", app_password="secret")
     assert client.email == "user@example.com"
+    assert client.available is True
 
 
 # --- discover_carddav_home ---

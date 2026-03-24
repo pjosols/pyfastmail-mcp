@@ -13,6 +13,11 @@ from pyfastmail_mcp.exceptions import FastmailError
 _MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
 
 
+def _check_path(path: str) -> None:
+    if ".." in path.split("/"):
+        raise ValueError("Path must not contain '..' segments")
+
+
 def _url(path: str) -> str:
     return WEBDAV_BASE.rstrip("/") + posixpath.normpath("/" + path.lstrip("/"))
 
@@ -34,8 +39,10 @@ def register(server: FastMCP, dav_client: DAVClient) -> None:
         try:
             if len(content) > _MAX_UPLOAD_BYTES * 4 // 3:
                 return json.dumps({"error": "Content too large; limit is 50 MB"})
+            _check_path(path)
             raw = base64.b64decode(content)
             url = _url(path)
+            dav_client.validate_dav_url(url)
             dav_client.put_bytes(url, raw, content_type)
             return json.dumps({"path": path, "uploaded": True})
         except (FastmailError, requests.RequestException, ValueError) as exc:
@@ -49,6 +56,8 @@ def register(server: FastMCP, dav_client: DAVClient) -> None:
             path: Path of the new folder (e.g. "/Documents/NewFolder").
         """
         try:
+            _check_path(path)
+            dav_client.validate_dav_url(_url(path))
             dav_client.mkcol(_url(path))
             return json.dumps({"path": path, "created": True})
         except (FastmailError, requests.RequestException, ValueError) as exc:
@@ -62,6 +71,8 @@ def register(server: FastMCP, dav_client: DAVClient) -> None:
             path: Path to delete (e.g. "/Documents/old.txt").
         """
         try:
+            _check_path(path)
+            dav_client.validate_dav_url(_url(path))
             dav_client.delete(_url(path))
             return json.dumps({"path": path, "deleted": True})
         except (FastmailError, requests.RequestException, ValueError) as exc:
@@ -76,8 +87,12 @@ def register(server: FastMCP, dav_client: DAVClient) -> None:
             destination: Destination path (e.g. "/Archive/old.txt").
         """
         try:
+            _check_path(source)
+            _check_path(destination)
             src_url = _url(source)
             dst_url = _url(destination)
+            dav_client.validate_dav_url(src_url)
+            dav_client.validate_dav_url(dst_url)
             dav_client.move(src_url, dst_url)
             return json.dumps(
                 {"source": source, "destination": destination, "moved": True}

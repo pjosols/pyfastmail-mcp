@@ -1,13 +1,13 @@
-"""Contacts tools subpackage (CardDAV)."""
+"""Contacts tools subpackage (JMAP)."""
 
 from mcp.server.fastmcp import FastMCP
 
-from pyfastmail_mcp.dav_client import DAVClient
+from pyfastmail_mcp.client import JMAPClient
 
 
-def register_all(server: FastMCP, dav_client: DAVClient) -> None:
+def register_all(server: FastMCP, client: JMAPClient) -> None:
     """Register all contacts tools with the server."""
-    from . import carddav, carddav_write
+    from . import contacts, contacts_write
 
-    carddav.register(server, dav_client)
-    carddav_write.register(server, dav_client)
+    contacts.register(server, client)
+    contacts_write.register(server, client)

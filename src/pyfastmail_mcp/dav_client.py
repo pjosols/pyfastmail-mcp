@@ -6,8 +6,6 @@ from urllib.parse import urlparse
 import defusedxml.ElementTree as ET
 import requests
 
-from pyfastmail_mcp.exceptions import AuthenticationError
-
 CARDDAV_BASE = "https://carddav.fastmail.com"
 CALDAV_BASE = "https://caldav.fastmail.com"
 WEBDAV_BASE = "https://myfiles.fastmail.com"
@@ -50,11 +48,13 @@ class DAVClient:
     ):
         self.email = email or os.environ.get("FASTMAIL_EMAIL", "")
         password = app_password or os.environ.get("FASTMAIL_APP_PASSWORD", "")
-        if not self.email:
-            raise AuthenticationError("FASTMAIL_EMAIL is not set")
-        if not password:
-            raise AuthenticationError("FASTMAIL_APP_PASSWORD is not set")
+        if not self.email or not password:
+            self.available = False
+            self._http = None
+            return
+        self.available = True
         self._http = requests.Session()
+        self._http.max_redirects = 0
         self._http.auth = (self.email, password)
 
     def propfind(self, url: str, depth: str = "1", body: str = "") -> requests.Response:

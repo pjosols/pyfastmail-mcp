@@ -57,7 +57,26 @@ def test_import_mail_modules():
 
 
 def test_import_contacts_modules():
-    from pyfastmail_mcp.tools.contacts import carddav, carddav_write  # noqa: F401
+    from pyfastmail_mcp.tools.contacts import register_all  # noqa: F401
+
+
+def test_using_contacts_constant_exists():
+    from pyfastmail_mcp.client import USING_CONTACTS
+
+    assert USING_CONTACTS == [
+        "urn:ietf:params:jmap:core",
+        "urn:ietf:params:jmap:contacts",
+    ]
+
+
+def test_carddav_modules_removed():
+    import importlib
+
+    for mod in (
+        "pyfastmail_mcp.tools.contacts.carddav",
+        "pyfastmail_mcp.tools.contacts.carddav_write",
+    ):
+        assert importlib.util.find_spec(mod) is None, f"{mod} should not exist"
 
 
 def test_import_calendar_modules():

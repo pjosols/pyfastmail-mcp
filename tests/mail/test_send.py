@@ -124,3 +124,113 @@ async def test_send_email_client_error():
     data = json.loads(result)
     assert "error" in data
     assert "network failure" in data["error"]
+
+
+def _submission_error_response(error_type, **extra):
+    return [
+        ("Email/set", {"created": {"draft": {"id": "e1"}}}, "e"),
+        (
+            "EmailSubmission/set",
+            {"notCreated": {"sub": {"type": error_type, **extra}}},
+            "s",
+        ),
+    ]
+
+
+async def test_send_forbidden_from():
+    client = mock_client()
+    client.call.side_effect = [
+        _identity_response(),
+        _submission_error_response("forbiddenFrom"),
+    ]
+    result = json.loads(
+        await _tool(client, "mail_send_email")(
+            to=["x@y.com"], subject="s", text_body="b"
+        )
+    )
+    assert "Not permitted to send from this address" in result["error"]
+
+
+async def test_send_forbidden_to_send():
+    client = mock_client()
+    client.call.side_effect = [
+        _identity_response(),
+        _submission_error_response("forbiddenToSend"),
+    ]
+    result = json.loads(
+        await _tool(client, "mail_send_email")(
+            to=["x@y.com"], subject="s", text_body="b"
+        )
+    )
+    assert "Sending is not permitted for this account" in result["error"]
+
+
+async def test_send_forbidden_mail_from():
+    client = mock_client()
+    client.call.side_effect = [
+        _identity_response(),
+        _submission_error_response("forbiddenMailFrom"),
+    ]
+    result = json.loads(
+        await _tool(client, "mail_send_email")(
+            to=["x@y.com"], subject="s", text_body="b"
+        )
+    )
+    assert "Not permitted to use this envelope sender" in result["error"]
+
+
+async def test_send_too_many_recipients():
+    client = mock_client()
+    client.call.side_effect = [
+        _identity_response(),
+        _submission_error_response("tooManyRecipients", maxRecipients=10),
+    ]
+    result = json.loads(
+        await _tool(client, "mail_send_email")(
+            to=["x@y.com"], subject="s", text_body="b"
+        )
+    )
+    assert "Too many recipients (max: 10)" in result["error"]
+
+
+async def test_send_no_recipients():
+    client = mock_client()
+    client.call.side_effect = [
+        _identity_response(),
+        _submission_error_response("noRecipients"),
+    ]
+    result = json.loads(
+        await _tool(client, "mail_send_email")(
+            to=["x@y.com"], subject="s", text_body="b"
+        )
+    )
+    assert "No recipients specified" in result["error"]
+
+
+async def test_send_invalid_recipients():
+    client = mock_client()
+    client.call.side_effect = [
+        _identity_response(),
+        _submission_error_response("invalidRecipients", invalidRecipients=["bad@"]),
+    ]
+    result = json.loads(
+        await _tool(client, "mail_send_email")(
+            to=["x@y.com"], subject="s", text_body="b"
+        )
+    )
+    assert "Invalid recipient addresses" in result["error"]
+    assert "bad@" in result["error"]
+
+
+async def test_send_invalid_email():
+    client = mock_client()
+    client.call.side_effect = [
+        _identity_response(),
+        _submission_error_response("invalidEmail"),
+    ]
+    result = json.loads(
+        await _tool(client, "mail_send_email")(
+            to=["x@y.com"], subject="s", text_body="b"
+        )
+    )
+    assert "Email is invalid" in result["error"]
