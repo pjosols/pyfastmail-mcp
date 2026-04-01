@@ -111,7 +111,7 @@ class DAVClient:
                 and parsed.port is None
                 and parsed.hostname in allowed_hostnames
             )
-        except Exception:
+        except Exception:  # intentional: urlparse can raise on malformed input; normalize to False
             ok = False
         if not ok:
             raise ValueError(f"URL not allowed: {url!r}")
