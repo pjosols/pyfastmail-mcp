@@ -1,0 +1,19 @@
+
+============================================================
+developer | 2026-03-22T19:47:20.582303
+============================================================
+[38;5;11mWARNING: [0mAgent conflict for [38;5;10marchitect[0m. Using workspace version.
+[32mAll tools are now trusted ([0m[31m![0m[32m). Kiro will execute tools without asking for confirmation.[0m
+Agents can sometimes do unexpected things so understand the risks.
+
+Learn more at [38;5;141mhttps://kiro.dev/docs/cli/chat/security/#using-tools-trust-all-safely[0m
+
+
+[38;5;11mWARNING: [0mYou have trusted [38;5;10mfs_write[0m tool, which overrides the toolsSettings: [38;5;141mallowedPaths: ["./**"][0m
+
+[38;5;252m[0m[?25l[38;5;141m> [0mThe first PENDING item is [38;5;10mrestructure_tools_into_subpackages[0m. Let me read the current codebase first.[0m[0m
+[?25l[0m[0m
+[?25l
+
+
+[1G[0m[0m[?25h

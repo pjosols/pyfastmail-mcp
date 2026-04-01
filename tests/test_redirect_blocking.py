@@ -51,4 +51,4 @@ def test_dav_client_redirect_raises_toomanyredirects(monkeypatch):
     import pytest
 
     with pytest.raises(req.TooManyRedirects):
-        client._http.get("https://carddav.fastmail.com/dav/")
+        client._http.get("https://caldav.fastmail.com/dav/")

@@ -5,7 +5,7 @@ from typing import Any
 
 import requests
 
-from pyfastmail_mcp.exceptions import AuthenticationError, JMAPError
+from pyfastmail_mcp.exceptions import AuthenticationError, JMAPError, MailboxNotFoundError
 
 JMAP_SESSION_URL = "https://api.fastmail.com/jmap/session"
 JMAP_API_URL = "https://api.fastmail.com/jmap/api/"
@@ -121,8 +121,6 @@ class JMAPClient:
 
     def get_mailbox_by_name(self, name: str) -> dict:
         """Return mailbox dict for the given name, or raise MailboxNotFoundError."""
-        from pyfastmail_mcp.exceptions import MailboxNotFoundError
-
         mailboxes = self.query_and_get("Mailbox", None, ["id", "name"])
         for mb in mailboxes:
             if mb.get("name", "").lower() == name.lower():
@@ -131,8 +129,6 @@ class JMAPClient:
 
     def get_mailbox_by_role(self, role: str) -> dict:
         """Return mailbox dict for the given role, or raise MailboxNotFoundError."""
-        from pyfastmail_mcp.exceptions import MailboxNotFoundError
-
         mailboxes = self.query_and_get("Mailbox", None, ["id", "name", "role"])
         for mb in mailboxes:
             if mb.get("role") == role:

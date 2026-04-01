@@ -1,0 +1,31 @@
+{
+  "name": "developer",
+  "description": "Autonomous developer — implements features one at a time",
+  "model": "claude-sonnet-4.6",
+  "prompt": "file://./developer-prompt.md",
+  "tools": ["*"],
+  "allowedTools": ["fs_read", "fs_write", "execute_bash", "glob", "grep"],
+  "toolsSettings": {
+    "fs_write": { "allowedPaths": ["./**"] },
+    "execute_bash": { "autoAllowReadonly": true }
+  },
+  "resources": [
+    "file://AGENT_TODO.md",
+    "file://.kiro/steering/urgent.md",
+    "file://.kiro/steering/status.md",
+    "file://.kiro/steering/conventions.md",
+    "file://.kiro/steering/issues.md",
+    "file://.kiro/steering/code-quality.md",
+    "skill://.kiro/skills/project-architecture/SKILL.md",
+    "skill://.kiro/skills/language-standards/SKILL.md",
+    "skill://.kiro/skills/api-implementation/SKILL.md",
+    "skill://.kiro/skills/tool-registration/SKILL.md"
+  ],
+  "hooks": {
+    "stop": [
+      {
+        "command": "uv run black src/ tests/ --quiet 2>/dev/null; uv run isort src/ tests/ --quiet 2>/dev/null; uv run ruff check --fix src/ tests/ --quiet 2>/dev/null; true"
+      }
+    ]
+  }
+}

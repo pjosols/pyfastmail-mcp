@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.2 (2026-03-31)
+
+### Documentation
+- Verified all module and function docstrings follow Wholeshoot convention
+- All public functions documented with imperative summaries and parameter descriptions
+- No changes to code logic or behavior
+
+## 0.3.1 (2026-03-24)
+
+### Fixed
+- Removed dead CardDAV code from `DAVClient` (constants, discovery methods, SSRF allowlist entry)
+
 ## 0.3.0 (2026-03-23)
 
 ### Added

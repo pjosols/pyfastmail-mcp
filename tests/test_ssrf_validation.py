@@ -8,7 +8,6 @@ from mcp.server.fastmcp import FastMCP
 
 from pyfastmail_mcp.dav_client import (
     CALDAV_BASE,
-    CARDDAV_BASE,
     WEBDAV_BASE,
     DAVClient,
 )
@@ -20,12 +19,6 @@ from pyfastmail_mcp.dav_client import (
 
 def _real_client():
     return DAVClient(email="u@example.com", app_password="pw")
-
-
-def test_validate_allows_carddav():
-    _real_client().validate_dav_url(
-        f"{CARDDAV_BASE}/dav/addressbooks/user/u@example.com/Default/"
-    )
 
 
 def test_validate_allows_caldav():
@@ -50,19 +43,19 @@ def test_validate_rejects_empty_string():
 
 def test_validate_rejects_lookalike():
     with pytest.raises(ValueError, match="not allowed"):
-        _real_client().validate_dav_url("https://carddav.fastmail.com.evil.com/path")
+        _real_client().validate_dav_url("https://caldav.fastmail.com.evil.com/path")
 
 
 def test_validate_rejects_userinfo():
     with pytest.raises(ValueError, match="not allowed"):
         _real_client().validate_dav_url(
-            "https://user@carddav.fastmail.com/dav/addressbooks/"
+            "https://user@caldav.fastmail.com/dav/calendars/"
         )
 
 
 def test_validate_rejects_nonstandard_port():
     with pytest.raises(ValueError, match="not allowed"):
-        _real_client().validate_dav_url("https://carddav.fastmail.com:8080/path")
+        _real_client().validate_dav_url("https://caldav.fastmail.com:8080/path")
 
 
 # ---------------------------------------------------------------------------
@@ -73,9 +66,6 @@ def test_validate_rejects_nonstandard_port():
 def _mock_client():
     c = MagicMock(spec=DAVClient)
     c.email = "u@example.com"
-    c.carddav_principal_url.return_value = (
-        f"{CARDDAV_BASE}/dav/principals/user/u@example.com/"
-    )
     c.caldav_principal_url.return_value = (
         f"{CALDAV_BASE}/dav/principals/user/u@example.com/"
     )

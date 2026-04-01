@@ -23,3 +23,5 @@ htmlcov/
 # Dev artifacts (not shipped)
 .kiro/
 .archive/
+.ltc/logs/
+.ltc/reports/

@@ -1,0 +1,19 @@
+{
+  "name": "architect",
+  "description": "Interactive architect that designs agent-driven development systems for new projects",
+  "model": "claude-opus-4.6",
+  "prompt": "file://./architect-prompt.md",
+  "tools": ["*"],
+  "allowedTools": ["fs_read", "fs_write", "execute_bash", "glob", "grep", "web_search", "web_fetch"],
+  "toolsSettings": {
+    "fs_write": {
+      "allowedPaths": ["./**"]
+    },
+    "execute_bash": {
+      "autoAllowReadonly": true
+    }
+  },
+  "resources": [
+    "skill://.kiro/skills/architect-guide/SKILL.md"
+  ]
+}

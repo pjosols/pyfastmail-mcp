@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "pyfastmail": {
+      "command": "uv",
+      "args": ["run", "--directory", "/Users/polsen/Projects/pyfastmail-mcp-v4", "pyfastmail-mcp"],
+      "env": {
+        "FASTMAIL_API_TOKEN": "${FASTMAIL_API_TOKEN}",
+        "FASTMAIL_EMAIL": "${FASTMAIL_EMAIL}",
+        "FASTMAIL_APP_PASSWORD": "${FASTMAIL_APP_PASSWORD}"
+      }
+    }
+  }
+}

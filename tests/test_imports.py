@@ -69,15 +69,5 @@ def test_using_contacts_constant_exists():
     ]
 
 
-def test_carddav_modules_removed():
-    import importlib
-
-    for mod in (
-        "pyfastmail_mcp.tools.contacts.carddav",
-        "pyfastmail_mcp.tools.contacts.carddav_write",
-    ):
-        assert importlib.util.find_spec(mod) is None, f"{mod} should not exist"
-
-
 def test_import_calendar_modules():
     from pyfastmail_mcp.tools.calendar import caldav  # noqa: F401

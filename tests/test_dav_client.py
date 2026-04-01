@@ -126,63 +126,6 @@ def test_valid_credentials_ok():
     assert client.available is True
 
 
-# --- discover_carddav_home ---
-
-_CARDDAV_HOME_XML = """<?xml version="1.0"?>
-<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:carddav">
-  <D:response>
-    <D:href>/dav/principals/user/user@example.com/</D:href>
-    <D:propstat>
-      <D:prop>
-        <C:addressbook-home-set>
-          <D:href>/dav/addressbooks/user/user@example.com/</D:href>
-        </C:addressbook-home-set>
-      </D:prop>
-      <D:status>HTTP/1.1 200 OK</D:status>
-    </D:propstat>
-  </D:response>
-</D:multistatus>"""
-
-_CARDDAV_HOME_XML_ABSOLUTE = """<?xml version="1.0"?>
-<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:carddav">
-  <D:response>
-    <D:href>/dav/principals/user/user@example.com/</D:href>
-    <D:propstat>
-      <D:prop>
-        <C:addressbook-home-set>
-          <D:href>https://carddav.fastmail.com/dav/addressbooks/user/user@example.com/</D:href>
-        </C:addressbook-home-set>
-      </D:prop>
-      <D:status>HTTP/1.1 200 OK</D:status>
-    </D:propstat>
-  </D:response>
-</D:multistatus>"""
-
-
-def test_discover_carddav_home_relative_href():
-    client = _client()
-    resp = _mock_response(text=_CARDDAV_HOME_XML)
-    with patch.object(client, "propfind", return_value=resp):
-        url = client.discover_carddav_home()
-    assert url == "https://carddav.fastmail.com/dav/addressbooks/user/user@example.com/"
-
-
-def test_discover_carddav_home_absolute_href():
-    client = _client()
-    resp = _mock_response(text=_CARDDAV_HOME_XML_ABSOLUTE)
-    with patch.object(client, "propfind", return_value=resp):
-        url = client.discover_carddav_home()
-    assert url == "https://carddav.fastmail.com/dav/addressbooks/user/user@example.com/"
-
-
-def test_discover_carddav_home_missing_raises():
-    client = _client()
-    resp = _mock_response(text='<?xml version="1.0"?><D:multistatus xmlns:D="DAV:"/>')
-    with patch.object(client, "propfind", return_value=resp):
-        with pytest.raises(ValueError, match="addressbook-home-set"):
-            client.discover_carddav_home()
-
-
 # --- discover_caldav_home ---
 
 _CALDAV_HOME_XML = """<?xml version="1.0"?>
