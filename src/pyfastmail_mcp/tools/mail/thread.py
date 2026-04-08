@@ -8,7 +8,15 @@ from mcp.server.fastmcp import FastMCP
 from pyfastmail_mcp.client import USING_MAIL, JMAPClient
 from pyfastmail_mcp.exceptions import FastmailError
 
-_THREAD_EMAIL_PROPS = ["id", "threadId", "subject", "from", "receivedAt", "preview"]
+_THREAD_EMAIL_PROPS = [
+    "id",
+    "threadId",
+    "subject",
+    "from",
+    "receivedAt",
+    "keywords",
+    "preview",
+]
 
 
 def register(server: FastMCP, client: JMAPClient) -> None:

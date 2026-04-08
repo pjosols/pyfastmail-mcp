@@ -18,6 +18,7 @@ _EMAIL_PROPS = [
     "bcc",
     "replyTo",
     "receivedAt",
+    "keywords",
     "bodyValues",
     "textBody",
     "htmlBody",
@@ -26,7 +27,7 @@ _EMAIL_PROPS = [
 ]
 
 
-_SUMMARY_PROPS = ["id", "subject", "from", "receivedAt"]
+_SUMMARY_PROPS = ["id", "subject", "from", "receivedAt", "keywords"]
 
 
 def register(server: FastMCP, client: JMAPClient) -> None:
@@ -163,6 +164,7 @@ def register(server: FastMCP, client: JMAPClient) -> None:
                 "to": email.get("to"),
                 "cc": email.get("cc"),
                 "receivedAt": email.get("receivedAt"),
+                "keywords": email.get("keywords", {}),
                 "body": body,
                 "hasAttachment": email.get("hasAttachment"),
                 "attachments": attachments,
