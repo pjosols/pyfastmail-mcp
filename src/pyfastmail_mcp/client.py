@@ -5,7 +5,11 @@ from typing import Any
 
 import requests
 
-from pyfastmail_mcp.exceptions import AuthenticationError, JMAPError, MailboxNotFoundError
+from pyfastmail_mcp.exceptions import (
+    AuthenticationError,
+    JMAPError,
+    MailboxNotFoundError,
+)
 
 JMAP_SESSION_URL = "https://api.fastmail.com/jmap/session"
 JMAP_API_URL = "https://api.fastmail.com/jmap/api/"

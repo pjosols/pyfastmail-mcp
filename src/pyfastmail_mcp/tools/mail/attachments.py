@@ -25,7 +25,9 @@ def _validate_jmap_url(url: str) -> None:
             or hostname == "fastmailusercontent.com"
             or hostname.endswith(".fastmailusercontent.com")
         )
-    except Exception:  # intentional: urlparse can raise on malformed input; normalize to False
+    except (
+        Exception
+    ):  # intentional: urlparse can raise on malformed input; normalize to False
         ok = False
     if not ok:
         raise ValueError(f"JMAP URL hostname not allowed: {url!r}")
